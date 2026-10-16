@@ -1,12 +1,17 @@
 const { githubClient } = require('../config/github');
 const Job = require('../models/Job');
 const RepositoryChange = require('../models/RepositoryChange');
-const { fetchRepositorySnapshot } = require('./githubService');
+const { fetchRepositorySnapshot, getRepository } = require('./githubService');
 const { affectedSkills, assessSkills, refreshGaps } = require('./skillAssessmentService');
 
 async function detectAndReassess(user, repository) {
+  if (repository.isPrivate) {
+    const error = new Error('Only public GitHub repositories are supported');
+    error.status = 403;
+    throw error;
+  }
+  const repoInfo = await getRepository(user, repository.repoFullName);
   const api = githubClient(user.githubAccessToken);
-  const { data: repoInfo } = await api.get(`/repos/${repository.repoFullName}`);
   const branch = repoInfo.default_branch || repository.defaultBranch;
   const { data: branchInfo } = await api.get(`/repos/${repository.repoFullName}/branches/${encodeURIComponent(branch)}`);
   const afterSha = branchInfo.commit.sha;

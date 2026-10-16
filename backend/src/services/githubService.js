@@ -14,10 +14,22 @@ function ensureToken(user) {
   return githubClient(user.githubAccessToken);
 }
 
+function isPublicRepository(repo) {
+  return repo.private === false;
+}
+
+function assertPublicRepository(repo) {
+  if (!isPublicRepository(repo)) {
+    const error = new Error('Only public GitHub repositories are supported');
+    error.status = 403;
+    throw error;
+  }
+}
+
 async function listRepositories(user) {
   const api = ensureToken(user);
-  const { data } = await api.get('/user/repos', { params: { per_page: 100, sort: 'updated', affiliation: 'owner,collaborator,organization_member' } });
-  return data.map(repo => ({
+  const { data } = await api.get('/user/repos', { params: { per_page: 100, sort: 'updated', visibility: 'public', affiliation: 'owner,collaborator,organization_member' } });
+  return data.filter(isPublicRepository).map(repo => ({
     id: String(repo.id),
     repoFullName: repo.full_name,
     name: repo.name,
@@ -32,13 +44,19 @@ async function listRepositories(user) {
 async function getRepository(user, repoFullName) {
   const api = ensureToken(user);
   const { data } = await api.get(`/repos/${repoFullName}`);
+  assertPublicRepository(data);
   return data;
 }
 
 async function fetchRepositorySnapshot(user, repository) {
+  if (repository.isPrivate) {
+    const error = new Error('Only public GitHub repositories are supported');
+    error.status = 403;
+    throw error;
+  }
+  const repo = await getRepository(user, repository.repoFullName);
   const api = ensureToken(user);
   const ownerRepo = repository.repoFullName;
-  const { data: repo } = await api.get(`/repos/${ownerRepo}`);
   const branch = repo.default_branch || repository.defaultBranch;
   const { data: branchInfo } = await api.get(`/repos/${ownerRepo}/branches/${encodeURIComponent(branch)}`);
   const commitSha = branchInfo.commit.sha;
@@ -79,6 +97,12 @@ async function fetchRepositorySnapshot(user, repository) {
 }
 
 async function fetchCommitChanges(user, repository, afterSha, beforeSha) {
+  if (repository.isPrivate) {
+    const error = new Error('Only public GitHub repositories are supported');
+    error.status = 403;
+    throw error;
+  }
+  await getRepository(user, repository.repoFullName);
   const api = ensureToken(user);
   const comparison = beforeSha && beforeSha !== afterSha
     ? await api.get(`/repos/${repository.repoFullName}/compare/${beforeSha}...${afterSha}`)
@@ -93,4 +117,4 @@ async function fetchCommitChanges(user, repository, afterSha, beforeSha) {
   };
 }
 
-module.exports = { listRepositories, getRepository, fetchRepositorySnapshot, fetchCommitChanges };
+module.exports = { listRepositories, getRepository, fetchRepositorySnapshot, fetchCommitChanges, assertPublicRepository, isPublicRepository };

@@ -8,7 +8,7 @@ const { success } = require('../utils/apiResponse');
 const asyncHandler = require('../utils/asyncHandler');
 
 async function ownedRepository(id, user) {
-  const repository = await Repository.findOne({ _id: id, user: user._id });
+  const repository = await Repository.findOne({ _id: id, user: user._id, isPrivate: { $ne: true } });
   if (!repository) {
     const error = new Error('Repository not found');
     error.status = 404;
@@ -26,7 +26,7 @@ function fileKind(path) {
 }
 
 exports.list = asyncHandler(async (req, res) => {
-  const repositories = await Repository.find({ user: req.user._id }).sort({ updatedAt: -1 });
+  const repositories = await Repository.find({ user: req.user._id, isPrivate: { $ne: true } }).sort({ updatedAt: -1 });
   success(res, repositories.map(repo => ({
     id: String(repo._id),
     name: repo.repoFullName,

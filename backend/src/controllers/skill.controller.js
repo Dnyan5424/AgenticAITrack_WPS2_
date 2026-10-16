@@ -1,13 +1,16 @@
 const SkillAssessment = require('../models/SkillAssessment');
 const SkillEvidence = require('../models/SkillEvidence');
 const Job = require('../models/Job');
+const Repository = require('../models/Repository');
+const publicRepositoryIds = require('../utils/publicRepositoryIds');
 const { reportFrom } = require('../services/skillAssessmentService');
 const { success } = require('../utils/apiResponse');
 const asyncHandler = require('../utils/asyncHandler');
 
 exports.list = asyncHandler(async (req, res) => {
   const jobs = await Job.find({ user: req.user._id }).select('_id requiredSkills preferredSkills');
-  const assessments = await SkillAssessment.find({ user: req.user._id }).populate('repository', 'repoFullName');
+  const repositoryIds = await publicRepositoryIds(req.user._id);
+  const assessments = await SkillAssessment.find({ user: req.user._id, repository: { $in: repositoryIds } }).populate('repository', 'repoFullName');
   const grouped = new Map();
   for (const item of assessments) {
     const existing = grouped.get(item.skill) || [];
@@ -32,7 +35,8 @@ exports.list = asyncHandler(async (req, res) => {
 
 exports.evidence = asyncHandler(async (req, res) => {
   const skill = req.params.skill.toLowerCase();
-  const assessments = await SkillAssessment.find({ user: req.user._id, skill: new RegExp(`^${skill.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }).populate('repository', 'repoFullName');
+  const repositoryIds = await publicRepositoryIds(req.user._id);
+  const assessments = await SkillAssessment.find({ user: req.user._id, repository: { $in: repositoryIds }, skill: new RegExp(`^${skill.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }).populate('repository', 'repoFullName');
   const evidence = await SkillEvidence.find({ assessment: { $in: assessments.map(item => item._id) } }).sort({ createdAt: -1 }).limit(100);
   const assessmentById = new Map(assessments.map(item => [String(item._id), item]));
   success(res, evidence.map(item => ({
@@ -47,7 +51,8 @@ exports.evidence = asyncHandler(async (req, res) => {
 
 exports.careerDna = asyncHandler(async (req, res) => {
   const jobs = await Job.find({ user: req.user._id });
-  const assessments = await SkillAssessment.find({ user: req.user._id });
+  const repositoryIds = await publicRepositoryIds(req.user._id);
+  const assessments = await SkillAssessment.find({ user: req.user._id, repository: { $in: repositoryIds } });
   const skillNames = [...new Set(jobs.flatMap(job => [...job.requiredSkills, ...job.preferredSkills]))];
   const result = skillNames.map(name => {
     const rows = assessments.filter(item => item.skill.toLowerCase() === name.toLowerCase());
@@ -58,8 +63,7 @@ exports.careerDna = asyncHandler(async (req, res) => {
 });
 
 exports.analysis = asyncHandler(async (req, res) => {
-  const Repository = require('../models/Repository');
-  const repository = await Repository.findOne({ _id: req.params.id, user: req.user._id });
+  const repository = await Repository.findOne({ _id: req.params.id, user: req.user._id, isPrivate: { $ne: true } });
   if (repository) {
     const assessments = await SkillAssessment.find({ user: req.user._id, repository: repository._id });
     success(res, { id: String(repository._id), state: repository.status, commitSha: repository.lastAnalyzedCommitSha, assessments });

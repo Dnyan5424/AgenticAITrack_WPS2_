@@ -14,7 +14,7 @@ npm install
 Copy-Item .env.example .env
 ```
 
-Set `JWT_SECRET` to a long random value in `.env`. Set `MONGO_URI` for your MongoDB instance. Then run:
+Set `JWT_SECRET` to a long random value in `.env`. Set `MONGODB_URI` for your MongoDB instance (the backend also accepts `MONGO_URI`). Then run:
 
 ```powershell
 npm run dev
@@ -26,7 +26,7 @@ The API listens on `http://localhost:5000`; health and integration readiness are
 
 The server starts with GitHub and Gemini credentials absent.
 
-- **GitHub:** Create a GitHub OAuth app with callback URL `http://localhost:5000/api/github/callback`; configure `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, and `GITHUB_REDIRECT_URI`. The OAuth flow requests repository read access and user email, validates a short-lived HttpOnly state cookie, and stores the token on the user document with Mongoose `select: false`. Add a push webhook pointing to `https://<public-host>/api/github/webhook` and configure `GITHUB_WEBHOOK_SECRET`. Webhooks use HMAC-SHA256 signature verification. When not configured, `/api/health` reports the missing settings and GitHub features return an explicit `503`.
+- **GitHub:** Create a GitHub OAuth app with callback URL `http://localhost:5000/api/github/callback`; configure `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, and `GITHUB_REDIRECT_URI`. OAuth requests user profile and email scopes only—private-repository access is not requested. Repository listings and analysis explicitly exclude private repositories. The flow validates a short-lived HttpOnly state cookie and stores the token on the user document with Mongoose `select: false`. Add a push webhook pointing to `https://<public-host>/api/github/webhook` and configure `GITHUB_WEBHOOK_SECRET`. Webhooks use HMAC-SHA256 signature verification. When not configured, `/api/health` reports the missing settings and GitHub features return an explicit `503`.
 - **Gemini:** `GEMINI_API_KEY` enables evidence-constrained explanation wording. Deterministic evidence extraction and status decisions remain available without it. AI output receives only observed excerpts and cannot create evidence records; extraction failure is logged and falls back to deterministic explanations.
 - **Watcher:** `WATCHER_ENABLED=true` (default) polls analyzed repositories every 15 minutes. A webhook can also initiate processing. No changes are simulated.
 

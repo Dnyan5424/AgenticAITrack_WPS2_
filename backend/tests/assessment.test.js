@@ -1,8 +1,26 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 process.env.JWT_SECRET = 'unit-test-secret-that-is-long-enough-123';
+process.env.GITHUB_CLIENT_ID = 'unit-test-client-id';
+process.env.GITHUB_CLIENT_SECRET = 'unit-test-client-secret';
+process.env.GITHUB_REDIRECT_URI = 'http://localhost:5000/api/github/callback';
 const { classify, NOT_DEMONSTRATED, affectedSkills, evidenceCandidates } = require('../src/services/skillAssessmentService');
+const { isPublicRepository, assertPublicRepository } = require('../src/services/githubService');
+const { createAuthorization } = require('../src/services/oauthService');
 const { parseJobDescription } = require('../src/services/jobParserService');
+
+test('GitHub OAuth requests profile and email access without repository scopes', () => {
+  const authorization = new URL(createAuthorization('state'));
+  assert.equal(authorization.searchParams.get('scope'), 'read:user user:email');
+});
+
+test('GitHub repository access permits public repositories only', () => {
+  assert.equal(isPublicRepository({ private: false }), true);
+  assert.equal(isPublicRepository({ private: true }), false);
+  assert.equal(isPublicRepository({}), false);
+  assert.doesNotThrow(() => assertPublicRepository({ private: false }));
+  assert.throws(() => assertPublicRepository({ private: true }), { status: 403 });
+});
 
 test('an empty evidence set uses the exact out-of-scope assessment status', () => {
   assert.deepEqual(classify([]), { status: NOT_DEMONSTRATED, confidence: 0.2 });

@@ -8,6 +8,7 @@ const { parseJobDescription } = require('../services/jobParserService');
 const { assessSkills, refreshGaps, reportFrom } = require('../services/skillAssessmentService');
 const { success } = require('../utils/apiResponse');
 const asyncHandler = require('../utils/asyncHandler');
+const publicRepositoryIds = require('../utils/publicRepositoryIds');
 
 function toFrontend(job) {
   return {
@@ -57,7 +58,7 @@ exports.list = asyncHandler(async (req, res) => {
 
 exports.assess = asyncHandler(async (req, res) => {
   const job = await ownedJob(req.params.id, req.user);
-  const repositories = await Repository.find({ user: req.user._id, status: { $ne: 'failed' } });
+  const repositories = await Repository.find({ user: req.user._id, isPrivate: { $ne: true }, status: { $ne: 'failed' } });
   if (!repositories.length) {
     const error = new Error('Connect at least one GitHub repository before assessing this job');
     error.status = 409;
@@ -90,7 +91,8 @@ exports.assess = asyncHandler(async (req, res) => {
 });
 
 async function getReportPayload(job, user) {
-  const assessments = await SkillAssessment.find({ user: user._id, job: job._id }).populate('repository', 'repoFullName repoUrl');
+  const repositoryIds = await publicRepositoryIds(user._id);
+  const assessments = await SkillAssessment.find({ user: user._id, job: job._id, repository: { $in: repositoryIds } }).populate('repository', 'repoFullName repoUrl');
   const report = reportFrom(assessments, job);
   for (const skill of report.skills) {
     const matches = assessments.filter(item => item.skill.toLowerCase() === skill.name.toLowerCase());
@@ -121,7 +123,8 @@ exports.report = asyncHandler(async (req, res) => {
 exports.gapReport = asyncHandler(async (req, res) => {
   const job = await ownedJob(req.params.id, req.user);
   const gaps = await GapReport.find({ user: req.user._id, job: job._id });
-  const assessments = await SkillAssessment.find({ user: req.user._id, job: job._id });
+  const repositoryIds = await publicRepositoryIds(req.user._id);
+  const assessments = await SkillAssessment.find({ user: req.user._id, job: job._id, repository: { $in: repositoryIds } });
   const toAssessment = gap => {
     const assessment = assessments.find(item => item.skill.toLowerCase() === gap.skill.toLowerCase());
     return {

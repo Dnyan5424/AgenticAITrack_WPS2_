@@ -18,7 +18,7 @@ function createAuthorization(state) {
   const url = new URL('https://github.com/login/oauth/authorize');
   url.searchParams.set('client_id', env.GITHUB_CLIENT_ID);
   url.searchParams.set('redirect_uri', env.GITHUB_REDIRECT_URI);
-  url.searchParams.set('scope', 'read:user user:email repo');
+  url.searchParams.set('scope', 'read:user user:email');
   url.searchParams.set('state', state);
   return url.toString();
 }

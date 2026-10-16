@@ -13,7 +13,7 @@ function startRepositoryWatcher() {
     if (running) return;
     running = true;
     try {
-      const repositories = await Repository.find({ status: { $ne: 'failed' }, lastAnalyzedCommitSha: { $ne: null } });
+      const repositories = await Repository.find({ isPrivate: { $ne: true }, status: { $ne: 'failed' }, lastAnalyzedCommitSha: { $ne: null } });
       for (const repository of repositories) {
         try {
           const user = await User.findById(repository.user).select('+githubAccessToken');

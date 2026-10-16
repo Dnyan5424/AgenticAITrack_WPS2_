@@ -67,7 +67,7 @@ exports.repositories = asyncHandler(async (req, res) => {
 
 exports.connectRepository = asyncHandler(async (req, res) => {
   const external = (await githubService.listRepositories(req.user)).find(repo => repo.id === String(req.body.id));
-  if (!external) {
+  if (!external || external.isPrivate) {
     const error = new Error('Repository is not accessible to the connected GitHub account');
     error.status = 404;
     throw error;
@@ -126,7 +126,7 @@ exports.webhook = asyncHandler(async (req, res) => {
   }
   if (req.get('x-github-event') === 'push') {
     const fullName = req.body.repository?.full_name;
-    const repository = await Repository.findOne({ repoFullName: fullName });
+    const repository = await Repository.findOne({ repoFullName: fullName, isPrivate: { $ne: true } });
     if (repository) {
       const { detectAndReassess } = require('../services/changeDetectionService');
       const user = await User.findById(repository.user).select('+githubAccessToken');
