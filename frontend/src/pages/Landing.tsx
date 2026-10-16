@@ -360,10 +360,9 @@ function Landing() {
                         : requirement.status
 
                       const demonstrated =
-                        status === 'demonstrated' || status === 'verified'
-                      const partial = status === 'partially_demonstrated' ||
-                        status === 'partial'
+  status === 'demonstrated' || status === 'verified';
 
+const partial = status === 'partial';
                       return (
                         <motion.div
                           key={requirement.name}
