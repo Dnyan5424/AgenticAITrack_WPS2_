@@ -1,6 +1,7 @@
 import axios, { AxiosError } from 'axios'
 import type { ApiResponse } from '../types'
-export const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'
+const configuredApiBase = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api').replace(/\/+$/, '')
+export const BASE_URL = configuredApiBase.endsWith('/api') ? configuredApiBase : `${configuredApiBase}/api`
 export const USE_MOCK = String(import.meta.env.VITE_USE_MOCK ?? 'true') === 'true'
 export const api = axios.create({ baseURL: BASE_URL, timeout: 15000, withCredentials: true })
 api.interceptors.request.use(config => {

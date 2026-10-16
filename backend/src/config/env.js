@@ -7,6 +7,7 @@ dotenv.config();
 // MONGO_URI takes precedence when both are set.
 const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI;
 const clientUrl = process.env.CLIENT_URL || process.env.FRONTEND_URL;
+const backendUrl = process.env.RENDER_EXTERNAL_URL || `http://localhost:${process.env.PORT || 5000}`;
 
 const schema = z.object({
   PORT: z.coerce.number().int().positive().default(5000),
@@ -16,7 +17,7 @@ const schema = z.object({
   CLIENT_URL: z.string().url().default(clientUrl || 'http://localhost:5173'),
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),
-  GITHUB_REDIRECT_URI: z.string().url().default('http://localhost:5000/api/github/callback'),
+  GITHUB_REDIRECT_URI: z.string().url().default(`${backendUrl}/api/github/callback`),
   GITHUB_WEBHOOK_SECRET: z.string().optional(),
   GEMINI_API_KEY: z.string().optional(),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),

@@ -1,0 +1,42 @@
+services:
+  - type: web
+    name: skillproof-api
+    runtime: node
+    plan: free
+    region: singapore
+    rootDir: backend
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: MONGO_URI
+        sync: false
+      - key: CLIENT_URL
+        sync: false
+      - key: WATCHER_ENABLED
+        value: "true"
+
+  - type: web
+    name: skillproof-web
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: SKIP_INSTALL_DEPS
+        value: "true"
+      - key: VITE_API_BASE_URL
+        fromService:
+          name: skillproof-api
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: VITE_USE_MOCK
+        value: "false"
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
