@@ -1,4 +1,6 @@
-import { createContext, useContext, useState, useCallback, useMemo, useRef, type ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useMemo, useRef, useEffect, type ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { USE_MOCK } from '../api/client'
 import type { Freshness, JobPosting, Repository, RepositoryChange, RoadmapTask, SkillAssessment, User } from '../types'
 import { authService } from '../services/authService'
 import { githubService } from '../services/githubService'
@@ -17,6 +19,7 @@ interface Ctx {
 const C = createContext<Ctx>(null!)
 export const useApp = () => useContext(C)
 export function AppProvider({ children }: { children: ReactNode }) {
+  const navigate = useNavigate()
   const [user, setUser] = useState<User | null>(null)
   const [repo, setRepo] = useState<Repository | null>(null)
   const [job, setJobS] = useState<JobPosting | null>(null)
@@ -28,14 +31,37 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [busy, setBusy] = useState(false)
   const [toasts, setToasts] = useState<Toast[]>([])
   const n = useRef(0)
+  const sessionInitialized = useRef(false)
   const dismiss = (id: number) => setToasts(t => t.filter(x => x.id !== id))
   const push = useCallback((msg: string, tone: Toast['tone'] = 'info') => { const id = ++n.current; setToasts(t => [...t, { id, msg, tone }]); setTimeout(() => dismiss(id), 4500) }, [])
+  useEffect(() => {
+    if (sessionInitialized.current) return
+    sessionInitialized.current = true
+    const returnedFromOAuth = authService.consumeOAuthCallback()
+    if (USE_MOCK || (!returnedFromOAuth && !authService.hasToken())) return
+    setBusy(true)
+    Promise.all([authService.me(), githubService.connection(), githubService.repositories()])
+      .then(([account, connection, repositories]) => {
+        if (!connection.connected) throw new Error('GitHub account is not connected. Please authorize GitHub again.')
+        setUser({ ...account, githubLogin: connection.login || account.githubLogin, demo: false })
+        setRepo(repositories[0] || null)
+        setLast(new Date().toISOString())
+        push(`Connected GitHub account ${connection.login || account.name}.`, 'ok')
+        if (returnedFromOAuth) navigate('/repositories', { replace: true })
+      })
+      .catch(error => push((error as Error).message, 'err'))
+      .finally(() => setBusy(false))
+  }, [navigate, push])
   const connectDemo = async () => {
     setBusy(true)
     try { const [u, repos, s, t] = await Promise.all([authService.connectDemo(), githubService.repositories(), skillService.careerDna(), roadmapService.get('j1')]); setUser(u); setRepo(repos[0]); setSkills(s); setTasks(t); setLast(new Date().toISOString()); push('Demo GitHub account connected. Data is simulated.', 'info') }
     catch (e) { push((e as Error).message, 'err') } finally { setBusy(false) }
   }
-  const disconnect = () => { setUser(null); setRepo(null); setSkills([]); setChanges([]); setJobS(null); setTasks([]); push('GitHub disconnected.') }
+  const disconnect = () => {
+    setUser(null); setRepo(null); setSkills([]); setChanges([]); setJobS(null); setTasks([])
+    void authService.logout().catch(error => push((error as Error).message, 'err'))
+    push('GitHub disconnected.')
+  }
   const setJob = async (j: JobPosting) => { setJobS(j); setLast(new Date().toISOString()); push('Assessment complete for ' + j.title) }
   const analyzeRepo = async () => { setBusy(true); await new Promise(r => setTimeout(r, 900)); setRepo(r => r && { ...r, analyzedSha: r.latestSha, analyzedAt: new Date().toISOString() }); setLast(new Date().toISOString()); setFresh('fresh'); setBusy(false); push('Repository analysed.', 'ok') }
   const simulateCommit = () => {

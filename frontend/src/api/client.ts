@@ -3,7 +3,13 @@ import type { ApiResponse } from '../types'
 export const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'
 export const USE_MOCK = String(import.meta.env.VITE_USE_MOCK ?? 'true') === 'true'
 export const api = axios.create({ baseURL: BASE_URL, timeout: 15000, withCredentials: true })
+api.interceptors.request.use(config => {
+  const token = sessionStorage.getItem('skillproof_token')
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
+})
 api.interceptors.response.use(r => r, (e: AxiosError<{ message?: string }>) => {
+  if (e.response?.status === 401) sessionStorage.removeItem('skillproof_token')
   const msg = e.response?.data?.message || (e.code === 'ECONNABORTED' ? 'The request timed out. Try again.' : e.message === 'Network Error' ? `Cannot reach the backend at ${BASE_URL}. Check that it is running, or enable mock mode.` : e.message)
   return Promise.reject(new Error(msg))
 })

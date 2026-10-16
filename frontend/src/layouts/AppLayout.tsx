@@ -20,7 +20,7 @@ export default function AppLayout() {
       <label className="relative max-w-sm flex-1"><span className="sr-only">Search</span><Search size={15} className="absolute left-3 top-3 text-mute" /><input className="input pl-9" placeholder="Search skills, files, commits" value={q} onChange={e => setQ(e.target.value)} /></label>
       <div className="ml-auto flex items-center gap-3">
         {USE_MOCK && <span className="hidden sm:block"><DemoTag>Mock mode</DemoTag></span>}
-        <span className={cn('hidden rounded-full border px-2.5 py-0.5 text-xs md:block', user ? 'border-green-200 bg-green-50 text-ok' : 'border-line bg-white text-ink2')}>{user ? 'GitHub: demo connected' : 'GitHub: not connected'}</span>
+        <span className={cn('hidden rounded-full border px-2.5 py-0.5 text-xs md:block', user ? 'border-green-200 bg-green-50 text-ok' : 'border-line bg-white text-ink2')}>{user ? `GitHub: ${user.demo ? 'demo connected' : 'connected'}` : 'GitHub: not connected'}</span>
         <Link to="/changes" aria-label={`Notifications: ${changes.length} change events`} className="relative rounded-xl p-2 hover:bg-soft"><Bell size={18} />{(changes.length > 0 || freshness !== 'fresh') && <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-amber" />}</Link>
         <Link to="/settings" aria-label="User menu" className="grid h-9 w-9 place-items-center rounded-full bg-teal text-sm font-semibold text-white">{(user?.name || 'Guest')[0]}</Link></div>
     </header>

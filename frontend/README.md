@@ -25,4 +25,7 @@ All sample data is illustrative; no external links are fabricated.
    (`/auth/github`, `/github/repositories`, `/jobs/analyze`, `/career-dna`, `/changes`, `/roadmaps/:jobId`, `/resume/analyze`, ...).
 3. Responses must be `{ "data": <payload>, "message"?: string }` matching `src/types`.
 4. Enable CORS with credentials for the Vite origin. Real change detection (webhooks) and AI belong to the backend.
-Note: the app context currently seeds state through mock services; once the backend is live, map `connectDemo` in `src/context/AppContext.tsx` to `authService.me()` + `githubService.repositories()`.
+The OAuth callback now hydrates the authenticated user, connection status, and public repository list. Job analysis and the rest of the live-data UI still need backend-specific state wiring; mock mode remains the complete demo experience.
+
+### GitHub OAuth session
+The OAuth callback returns to the frontend with a JWT in the URL fragment. The frontend consumes it into `sessionStorage`, removes it from the visible URL, and sends it as a Bearer token on API requests. After the redirect, it loads `/auth/me`, `/github/connection`, and `/github/repositories`. Set the GitHub OAuth callback URL to the backend's `/api/github/callback`, and set the backend `CLIENT_URL` to this frontend's origin.
