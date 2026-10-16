@@ -1,11 +1,224 @@
-@tailwind base;@tailwind components;@tailwind utilities;
-body{@apply bg-cream text-ink font-sans antialiased;background-image:radial-gradient(#E7E2D9 1px,transparent 1px);background-size:22px 22px}
-h1,h2,h3,h4{@apply font-head tracking-tight}
-:focus-visible{outline:2px solid #0F766E;outline-offset:2px;border-radius:6px}
-.card{@apply bg-white border border-line rounded-xl2 shadow-card}
-.btn{@apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition active:scale-[.98] disabled:opacity-50}
-.btn-p{@apply btn bg-teal text-white hover:bg-teal-hover}
-.btn-s{@apply btn bg-white border border-line text-ink hover:bg-soft}
-.input{@apply w-full rounded-xl border border-line bg-white px-3 py-2.5 text-sm placeholder:text-mute}
-.skeleton{@apply animate-pulse bg-soft rounded-xl}
-@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* --------------------------------
+   SkillProof design tokens
+--------------------------------- */
+
+:root {
+  font-family: 'DM Sans', sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  --sp-paper: #fbf9f4;
+  --sp-ink: #202b28;
+  --sp-teal: #286b53;
+  --sp-amber: #b77a24;
+  --sp-border: #e6e0d5;
+}
+
+/* --------------------------------
+   Typography
+--------------------------------- */
+
+.font-display {
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.font-mono {
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  @apply font-head tracking-tight;
+}
+
+/* --------------------------------
+   Global styles
+--------------------------------- */
+
+body {
+  @apply bg-cream text-ink font-sans antialiased;
+  background-image: radial-gradient(#e7e2d9 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+:focus-visible {
+  outline: 2px solid #0f766e;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* --------------------------------
+   Existing SkillProof components
+--------------------------------- */
+
+.card {
+  @apply bg-white border border-line rounded-xl2 shadow-card;
+}
+
+.btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition active:scale-[.98] disabled:opacity-50;
+}
+
+.btn-p {
+  @apply btn bg-teal text-white hover:bg-teal-hover;
+}
+
+.btn-s {
+  @apply btn bg-white border border-line text-ink hover:bg-soft;
+}
+
+.input {
+  @apply w-full rounded-xl border border-line bg-white px-3 py-2.5 text-sm placeholder:text-mute;
+}
+
+.skeleton {
+  @apply animate-pulse bg-soft rounded-xl;
+}
+
+/* --------------------------------
+   Landing page
+--------------------------------- */
+
+.landing-shell {
+  background: var(--sp-paper);
+  color: var(--sp-ink);
+  font-family: 'DM Sans', sans-serif;
+}
+
+.landing-grid-bg {
+  background-image: radial-gradient(#d9d5c9 0.7px, transparent 0.7px);
+  background-size: 23px 23px;
+  background-position: 11px 11px;
+}
+
+.landing-grid-bg > div {
+  background: linear-gradient(
+    90deg,
+    rgba(251, 249, 244, 0.97) 0%,
+    rgba(251, 249, 244, 0.91) 48%,
+    rgba(251, 249, 244, 0.65) 100%
+  );
+}
+
+.landing-headline-accent {
+  color: #286b53;
+  text-decoration: underline;
+  text-decoration-color: #d8a24b;
+  text-decoration-thickness: 3px;
+  text-underline-offset: 8px;
+}
+
+.landing-nav-link {
+  color: #656b62;
+  font-size: 13px;
+  transition: color 180ms ease;
+}
+
+.landing-nav-link:hover {
+  color: #286b53;
+}
+
+.landing-signin {
+  padding: 10px 12px;
+  color: #4e584f;
+  font-size: 13px;
+  transition: color 180ms ease;
+}
+
+.landing-signin:hover {
+  color: #286b53;
+}
+
+.landing-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  padding: 12px 16px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  transition:
+    background 180ms ease,
+    color 180ms ease,
+    border-color 180ms ease,
+    transform 180ms ease;
+}
+
+.landing-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.landing-button:focus-visible,
+.landing-nav-link:focus-visible,
+.landing-signin:focus-visible {
+  outline: 2px solid #286b53;
+  outline-offset: 3px;
+}
+
+.landing-button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.landing-button-dark {
+  background: #173f38;
+  color: #fffefa;
+}
+
+.landing-button-dark:hover:not(:disabled) {
+  background: #24584b;
+}
+
+.landing-button-light {
+  border-color: #dcd7cb;
+  background: rgba(255, 254, 250, 0.8);
+  color: #303d34;
+}
+
+.landing-button-light:hover:not(:disabled) {
+  border-color: #a6b8a7;
+  background: #fffefa;
+}
+
+.landing-cta-grid {
+  background-image:
+    radial-gradient(#d5d1c4 0.7px, transparent 0.7px),
+    linear-gradient(135deg, #f0eee5, #f7f4ec);
+  background-size: 22px 22px, 100% 100%;
+}
+
+/* --------------------------------
+   Accessibility and responsive UI
+--------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .landing-button {
+    padding: 11px 13px;
+    font-size: 12px;
+  }
+}
