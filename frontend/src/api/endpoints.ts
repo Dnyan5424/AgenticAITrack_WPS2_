@@ -1,5 +1,5 @@
 export const EP = {
-  authGithub: '/auth/github', me: '/auth/me', logout: '/auth/logout',
+  authGithub: '/auth/github', authLogin: '/auth/login', authRegister: '/auth/register', me: '/auth/me', logout: '/auth/logout',
   connection: '/github/connection', ghRepos: '/github/repositories', ghConnect: '/github/repositories/connect',
   repo: (id: string) => `/repositories/${id}`, repoFiles: (id: string) => `/repositories/${id}/files`,
   repoAnalyze: (id: string) => `/repositories/${id}/analyze`, repoSync: (id: string) => `/repositories/${id}/sync`,
