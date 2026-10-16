@@ -16,7 +16,7 @@ services:
       - key: MONGO_URI
         sync: false
       - key: CLIENT_URL
-        value: https://skillproof-2065.onrender.com
+        value: https://skillproof-web.onrender.com
       - key: WATCHER_ENABLED
         value: "true"
 
