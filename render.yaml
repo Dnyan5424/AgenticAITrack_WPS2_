@@ -16,7 +16,7 @@ services:
       - key: MONGO_URI
         sync: false
       - key: CLIENT_URL
-        sync: false
+        value: https://skillproof-2065.onrender.com
       - key: WATCHER_ENABLED
         value: "true"
 
@@ -30,10 +30,7 @@ services:
       - key: SKIP_INSTALL_DEPS
         value: "true"
       - key: VITE_API_BASE_URL
-        fromService:
-          name: skillproof-api
-          type: web
-          envVarKey: RENDER_EXTERNAL_URL
+        value: https://skillproof-api-b411.onrender.com
       - key: VITE_USE_MOCK
         value: "false"
     routes:
