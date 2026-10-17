@@ -27,10 +27,11 @@ All sample data is illustrative; no external links are fabricated.
 4. Enable CORS with credentials for the Vite origin. Real change detection (webhooks) and AI belong to the backend.
 The OAuth callback now hydrates the authenticated user, connection status, and public repository list. Job analysis and the rest of the live-data UI still need backend-specific state wiring; mock mode remains the complete demo experience.
 
+## AI usage
+Repository skill matching, confidence classification, evidence summaries, job-fit scores, and skill-gap recommendations use deterministic backend rules. Gemini is reserved for the explicitly labeled AI Mentor and personalized AI roadmap features.
+
 ## Deploy to Render
 The repository-root `render.yaml` defines a Node web service for the Express API and a static site for the Vite frontend. Create a Render Blueprint from the repository and provide `MONGO_URI` and the frontend `CLIENT_URL` when prompted. The frontend API base URL is wired from the API service URL. The API defaults its GitHub OAuth callback to its Render URL; configure that exact callback in the GitHub OAuth app after the API service is created. Add Render's outbound IP addresses to the Atlas project's IP access list so the API can reach the cluster.
 
 ### GitHub OAuth session
 The OAuth callback returns to the frontend with a JWT in the URL fragment. The frontend consumes it into `sessionStorage`, removes it from the visible URL, and sends it as a Bearer token on API requests. After the redirect, it loads `/auth/me`, `/github/connection`, and `/github/repositories`. Set the GitHub OAuth callback URL to the backend's `/api/github/callback`, and set the backend `CLIENT_URL` to this frontend's origin.
-
-Password recovery sends one-time links through Resend. To enable it, set `RESEND_API_KEY` and `EMAIL_FROM` on the backend service; `EMAIL_FROM` must use a sender domain verified with Resend. Reset links expire after 30 minutes. New accounts are not email-verified in this release.

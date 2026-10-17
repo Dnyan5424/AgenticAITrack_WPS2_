@@ -5,5 +5,11 @@ module.exports = rateLimit({
   limit: 120,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
+  skip: req =>
+    (req.method === 'GET' && req.path === '/auth/github') ||
+    (req.method === 'GET' && req.path === '/github/callback') ||
+    req.path === '/github/connection' ||
+    req.path === '/github/repositories' ||
+    req.path.startsWith('/github/repositories/'),
   message: { message: 'Too many requests. Please try again later.' }
 });

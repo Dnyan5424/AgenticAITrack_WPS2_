@@ -117,6 +117,24 @@ async function fetchRepositorySnapshot(user, repository, { priorityPaths = [] } 
   };
 }
 
+async function fetchRecentCommits(user, repository) {
+  if (repository.isPrivate) {
+    const error = new Error('Only public GitHub repositories are supported');
+    error.status = 403;
+    throw error;
+  }
+  await getRepository(user, repository.repoFullName);
+  const api = ensureToken(user);
+  const { data: commits } = await api.get(`/repos/${repository.repoFullName}/commits`, { params: { per_page: 10 } });
+  return commits.map(commit => ({
+    sha: commit.sha,
+    message: commit.commit.message,
+    date: commit.commit.author?.date || commit.commit.committer?.date,
+    url: commit.html_url,
+    files: []
+  }));
+}
+
 async function fetchCommitChanges(user, repository, afterSha, beforeSha) {
   if (repository.isPrivate) {
     const error = new Error('Only public GitHub repositories are supported');
@@ -138,4 +156,4 @@ async function fetchCommitChanges(user, repository, afterSha, beforeSha) {
   };
 }
 
-module.exports = { listRepositories, getRepository, fetchRepositorySnapshot, fetchCommitChanges, assertPublicRepository, isPublicRepository };
+module.exports = { listRepositories, getRepository, fetchRepositorySnapshot, fetchRecentCommits, fetchCommitChanges, assertPublicRepository, isPublicRepository };

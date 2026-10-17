@@ -1,9 +1,9 @@
 import type { JobPosting, Repository, SkillAssessment, RoadmapTask, Commit, RepositoryFile } from '../types'
 const iso = (d = 0) => new Date(Date.now() - d * 36e5).toISOString()
-export const DEMO_USER = { id: 'demo', name: 'Demo Student', email: 'demo@skillproof.local', githubLogin: 'demo-student (simulated)', demo: true }
+export const DEMO_USER = { id: 'demo', name: 'Student', email: 'demo@skillproof.local', githubLogin: 'demo-student', demo: true }
 export const seedRepo = (): Repository => ({
   id: 'r1', name: 'campus-orders-api', language: 'Python', branch: 'main', latestSha: 'c41d9e7', analyzedSha: 'c41d9e7', analyzedAt: iso(2),
-  description: 'Illustrative sample repository: REST API and React dashboard for campus canteen orders.',
+  description: 'REST API and React dashboard for campus canteen orders.',
   files: [
     { path: 'app/routes/orders.py', kind: 'source', excerpt: '@router.post("/orders")\nasync def create_order(payload: OrderIn):\n    return service.create(payload)', explanation: 'REST endpoints with request validation demonstrate API development.' },
     { path: 'src/App.tsx', kind: 'source', excerpt: 'export default function App() {\n  const [orders, setOrders] = useState<Order[]>([])', explanation: 'React component with hooks.' },
@@ -11,6 +11,46 @@ export const seedRepo = (): Repository => ({
     { path: 'Dockerfile', kind: 'deploy', excerpt: 'FROM python:3.12-slim\nCMD ["uvicorn","app.main:app"]', explanation: 'Container config shows partial deployment evidence; no CI pipeline found.' },
     { path: 'README.md', kind: 'doc', excerpt: '# Campus Orders API\nRun with docker compose up', explanation: 'Setup documentation.' }],
   commits: [{ sha: 'c41d9e7', message: 'Add Dockerfile and README', date: iso(2), files: ['Dockerfile', 'README.md'] }, { sha: 'b02a117', message: 'Build orders endpoints', date: iso(30), files: ['app/routes/orders.py'] }, { sha: 'a7710cf', message: 'Scaffold React dashboard', date: iso(70), files: ['src/App.tsx', 'src/components/Navbar.tsx'] }] })
+export const seedRepos = (): Repository[] => {
+  const orders = seedRepo()
+  const portfolio: Repository = {
+    ...orders,
+    id: 'r2',
+    name: 'career-portfolio-web',
+    language: 'TypeScript',
+    latestSha: 'd8ab204',
+    analyzedSha: 'd8ab204',
+    description: 'Portfolio and career dashboard.',
+    files: [
+      { path: 'src/pages/Profile.tsx', kind: 'source', excerpt: 'export function Profile() { return <main>Career profile</main> }', explanation: 'TypeScript React page component.' },
+      { path: 'src/api/client.ts', kind: 'source', excerpt: 'export async function getProfile() { return fetch("/api/profile") }', explanation: 'Client-side API request.' },
+      { path: 'tests/profile.test.tsx', kind: 'test', excerpt: 'it("renders profile details", () => render(<Profile />))', explanation: 'Component test for profile rendering.' }
+    ],
+    commits: [
+      { sha: 'd8ab204', message: 'Add profile dashboard and tests', date: iso(4), files: ['src/pages/Profile.tsx', 'tests/profile.test.tsx'] },
+      { sha: 'ab31c69', message: 'Connect profile API client', date: iso(38), files: ['src/api/client.ts'] }
+    ]
+  }
+  const analytics: Repository = {
+    ...orders,
+    id: 'r3',
+    name: 'sales-insights-notebook',
+    language: 'Python',
+    latestSha: 'f73ca10',
+    analyzedSha: 'f73ca10',
+    description: 'Python data analysis and SQL reports.',
+    files: [
+      { path: 'analysis/revenue.py', kind: 'source', excerpt: 'monthly = orders.groupby("month")["total"].sum()', explanation: 'Python data aggregation for monthly revenue.' },
+      { path: 'sql/top_products.sql', kind: 'sql', excerpt: 'SELECT product, SUM(quantity) FROM orders GROUP BY product;', explanation: 'SQL aggregation for product reporting.' },
+      { path: 'README.md', kind: 'doc', excerpt: '# Sales insights\\nMonthly revenue and product reports.', explanation: 'Project and report documentation.' }
+    ],
+    commits: [
+      { sha: 'f73ca10', message: 'Add monthly revenue analysis', date: iso(7), files: ['analysis/revenue.py'] },
+      { sha: 'c45ef80', message: 'Add product summary query', date: iso(42), files: ['sql/top_products.sql'] }
+    ]
+  }
+  return [orders, portfolio, analytics]
+}
 const ev = (file: string, excerpt: string, explanation: string, commit: string): SkillAssessment['evidence'][number] => ({ repo: 'campus-orders-api', file, excerpt, explanation, commit })
 const sk = (name: string, category: string, status: SkillAssessment['status'], confidence: number, evidence: SkillAssessment['evidence'], extra: Partial<SkillAssessment> = {}): SkillAssessment => ({ name, category, status, confidence, evidence, updatedAt: iso(2), ...extra })
 export const seedSkills = (): SkillAssessment[] => [
@@ -22,7 +62,7 @@ export const seedSkills = (): SkillAssessment[] => [
   sk('SQL', 'Data', 'not_demonstrated', 0.2, [], { gap: 'No .sql files or query code found in the analyzed scope.', improvement: 'Add db/queries.sql with joins and aggregations used by the API.' }),
   sk('Automated testing', 'Quality', 'not_demonstrated', 0.2, [], { gap: 'No test files found in the analyzed scope.', improvement: 'Add tests/test_api.py covering the orders endpoints.' }),
   sk('CI/CD', 'Deployment', 'not_demonstrated', 0.15, [], { gap: 'No workflow files found in the analyzed scope.', improvement: 'Add .github/workflows/ci.yml that runs tests on push.' })]
-export const sampleJob = (): JobPosting => ({ id: 'j1', title: 'Backend Intern (sample)', company: 'Sample Co — illustrative', sourceUrl: 'https://example.com/careers/backend-intern', sample: true,
+export const sampleJob = (): JobPosting => ({ id: 'j1', title: 'Back-End Developer Intern', company: 'Not detected', sourceUrl: 'https://example.com/careers/backend-intern', sample: true,
   requirements: [['API development', 1], ['Python', 1], ['React', 1], ['SQL', 1], ['Automated testing', 1], ['Docker', 0], ['CI/CD', 0], ['Git', 0]].map(([name, r]) => ({ name: name as string, required: !!r })) })
 export const commitFiles: RepositoryFile[] = [
   { path: 'db/queries.sql', kind: 'sql', excerpt: 'SELECT item, COUNT(*) FROM orders GROUP BY item;', explanation: 'Aggregation query used by the analytics endpoint.' },

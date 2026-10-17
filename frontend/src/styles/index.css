@@ -16,11 +16,12 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  --sp-paper: #fbf9f4;
+  --sp-paper: #f8f7f2;
   --sp-ink: #202b28;
   --sp-teal: #286b53;
   --sp-amber: #b77a24;
   --sp-border: #e6e0d5;
+  --sp-focus: #286b53;
 }
 
 /* --------------------------------
@@ -48,14 +49,27 @@ h4 {
 
 body {
   @apply bg-cream text-ink font-sans antialiased;
-  background-image: radial-gradient(#e7e2d9 1px, transparent 1px);
-  background-size: 22px 22px;
+  background-image: radial-gradient(rgba(80, 91, 79, 0.12) 0.75px, transparent 0.75px);
+  background-size: 26px 26px;
+  font-feature-settings: 'ss01' on;
 }
 
 :focus-visible {
-  outline: 2px solid #0f766e;
-  outline-offset: 2px;
+  outline: 2px solid var(--sp-focus);
+  outline-offset: 3px;
   border-radius: 6px;
+}
+
+::selection {
+  background: #dcebe2;
+  color: #173f38;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
 }
 
 /* --------------------------------
@@ -64,26 +78,52 @@ body {
 
 .card {
   @apply bg-white border border-line rounded-xl2 shadow-card;
+  box-shadow: 0 5px 20px -12px rgba(32, 43, 40, 0.24);
 }
 
 .btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition active:scale-[.98] disabled:opacity-50;
+  @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition duration-150 active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-55;
 }
 
 .btn-p {
-  @apply btn bg-teal text-white hover:bg-teal-hover;
+  @apply btn bg-teal text-white shadow-sm hover:bg-teal-hover hover:shadow;
 }
 
 .btn-s {
-  @apply btn bg-white border border-line text-ink hover:bg-soft;
+  @apply btn bg-white border border-line text-ink hover:border-[#c9d3c9] hover:bg-soft;
 }
 
 .input {
-  @apply w-full rounded-xl border border-line bg-white px-3 py-2.5 text-sm placeholder:text-mute;
+  @apply min-h-11 w-full rounded-xl border border-line bg-white px-3 py-2.5 text-sm text-ink transition-colors placeholder:text-[#68746c] hover:border-[#c9d3c9] focus:border-teal focus:outline-none focus:ring-2 focus:ring-teal/15;
 }
 
 .skeleton {
   @apply animate-pulse bg-soft rounded-xl;
+}
+
+.page-title {
+  @apply font-display text-[1.75rem] font-semibold leading-tight tracking-[-0.035em] text-ink sm:text-3xl;
+}
+
+.page-description {
+  @apply mt-2 max-w-2xl text-sm leading-6 text-ink2;
+}
+
+.quiet-scrollbar {
+  scrollbar-color: #c6cec5 transparent;
+  scrollbar-width: thin;
+}
+
+.quiet-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.quiet-scrollbar::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: #c6cec5;
+  background-clip: padding-box;
 }
 
 /* --------------------------------
@@ -97,7 +137,7 @@ body {
 }
 
 .landing-grid-bg {
-  background-image: radial-gradient(#d9d5c9 0.7px, transparent 0.7px);
+  background-image: radial-gradient(rgba(80, 91, 79, 0.16) 0.7px, transparent 0.7px);
   background-size: 23px 23px;
   background-position: 11px 11px;
 }
@@ -220,5 +260,9 @@ body {
   .landing-button {
     padding: 11px 13px;
     font-size: 12px;
+  }
+
+  .card {
+    border-radius: 14px;
   }
 }

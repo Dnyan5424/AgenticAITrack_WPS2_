@@ -8,6 +8,7 @@ const idParams = validate(z.object({ params: z.object({ id: z.string().regex(/^[
 
 router.use(authenticate);
 router.get('/', repository.list);
+router.get('/:id/commits', idParams, repository.commits);
 router.get('/:id/files', idParams, repository.files);
 router.post('/:id/analyze', idParams, repository.analyze);
 router.post('/:id/sync', idParams, repository.sync);

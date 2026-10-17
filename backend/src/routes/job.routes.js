@@ -7,11 +7,12 @@ const router = express.Router();
 
 router.use(authenticate);
 router.post('/analyze', validate(z.object({ body: z.object({
-  text: z.string().trim().min(30).max(50000),
+  text: z.string().trim().min(30).max(50000).optional(),
   url: z.union([z.string().url(), z.literal('')]).optional(),
   title: z.string().trim().min(1).max(150).optional(),
   company: z.string().trim().max(150).optional()
-}) })), job.analyze);
+}).refine(value => Boolean(value.url || value.text), { message: 'A job-posting URL is required', path: ['url'] }) })), job.analyze);
+router.get('/recommendations', job.recommendations);
 router.get('/', job.list);
 router.patch('/:id', validate(z.object({
   params: z.object({ id: z.string().regex(/^[a-f\d]{24}$/i) }),

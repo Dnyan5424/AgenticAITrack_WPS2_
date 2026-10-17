@@ -54,7 +54,7 @@ exports.connection = asyncHandler(async (req, res) => {
 exports.disconnectAccount = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id).select('+passwordHash +githubAccessToken');
   if (user?.githubUsername && !user.passwordHash) {
-    const error = new Error('Set a password through Forgot password before disconnecting GitHub, so you can still sign in.');
+    const error = new Error('This account uses GitHub as its sign-in method. Keep GitHub connected to retain account access.');
     error.status = 409;
     throw error;
   }

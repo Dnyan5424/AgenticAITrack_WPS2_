@@ -8,7 +8,7 @@ const router = express.Router();
 
 router.use(authenticate);
 router.get('/career-dna', skill.careerDna);
-router.get('/skills', skill.list);
+router.get('/skills', validate(z.object({ query: z.object({ jobId: z.string().regex(/^[a-f\d]{24}$/i).optional() }) })), skill.list);
 router.get('/skills/:skill/evidence', skill.evidence);
 router.get('/gap-reports/:id', validate(z.object({ params: z.object({ id: z.string().regex(/^[a-f\d]{24}$/i) }) })), job.gapReport);
 

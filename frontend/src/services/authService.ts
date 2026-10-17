@@ -19,13 +19,6 @@ export const authService = {
   register(credentials: { name: string; email: string; password: string }): Promise<User> {
     return authenticate(EP.authRegister, credentials)
   },
-  requestPasswordReset(email: string) {
-    if (USE_MOCK) return Promise.reject(new Error('Password recovery is available for live accounts only.'))
-    return post<void>(EP.forgotPassword, { email })
-  },
-  async resetPassword(token: string, password: string): Promise<User> {
-    return authenticate(EP.resetPassword, { token, password })
-  },
   async deleteAccount() {
     await apiDelete(EP.deleteAccount)
     this.clearToken()

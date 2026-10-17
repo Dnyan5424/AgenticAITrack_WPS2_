@@ -18,3 +18,34 @@ export function fitScore(job: JobPosting | null, skills: SkillAssessment[]) {
   }
   return { score: max ? Math.round((got / max) * 100) : 0, got, max }
 }
+
+const ROLE_SKILLS = [
+  { title: 'Back-End Developer', skills: ['API development', 'Node.js', 'Express', 'Python', 'Java', 'SQL', 'MongoDB', 'REST APIs', 'Docker', 'AWS'] },
+  { title: 'Full-Stack Developer', skills: ['React', 'JavaScript', 'TypeScript', 'Node.js', 'Express', 'SQL', 'REST APIs', 'Git'] },
+  { title: 'Front-End Developer', skills: ['React', 'JavaScript', 'TypeScript', 'HTML/CSS', 'Automated testing', 'Git'] },
+  { title: 'Data Analyst', skills: ['Python', 'SQL', 'Data Analysis', 'Machine Learning'] },
+  { title: 'DevOps Engineer', skills: ['Docker', 'CI/CD', 'AWS', 'Python', 'Git', 'Automated testing'] }
+] as const
+
+export function recommendRoles(skills: SkillAssessment[]) {
+  return ROLE_SKILLS.map(role => {
+    const matchedSkills = role.skills.flatMap(name => {
+      const assessment = skills.find(skill => skill.name.toLowerCase() === name.toLowerCase())
+      return assessment && ['demonstrated', 'partial'].includes(assessment.status)
+        ? [{ name, status: assessment.status }]
+        : []
+    })
+    const points = matchedSkills.reduce((total, skill) => total + (skill.status === 'demonstrated' ? 1 : 0.5), 0)
+    const missingSkills = role.skills.filter(name => !matchedSkills.some(skill => skill.name === name))
+    const skillCoverage = role.skills.length ? Math.round((points / role.skills.length) * 100) : 0
+    return {
+      title: role.title,
+      match: skillCoverage,
+      skillCoverage,
+      textSimilarity: 0,
+      matchedSkills: matchedSkills.map(skill => skill.name),
+      missingSkills,
+      description: 'Role suggestion based on assessed repository skills.'
+    }
+  }).sort((left, right) => right.match - left.match)
+}

@@ -2,10 +2,11 @@ export type Status = 'demonstrated' | 'partial' | 'not_demonstrated' | 'under_re
 export type Freshness = 'fresh' | 'changes' | 'in_progress' | 'failed'
 export interface User { id: string; name: string; email: string; githubLogin?: string; demo: boolean }
 export interface Commit { sha: string; message: string; date: string; files: string[]; url?: string }
-export interface RepositoryFile { path: string; kind: 'source' | 'sql' | 'test' | 'deploy' | 'doc'; excerpt: string; explanation: string }
+export interface RepositoryFile { path: string; kind: 'source' | 'sql' | 'test' | 'deploy' | 'doc'; excerpt: string; explanation: string; url?: string }
 export interface Repository { id: string; name: string; repoFullName?: string; language: string; branch: string; latestSha: string; analyzedSha: string; analyzedAt: string; description: string; files: RepositoryFile[]; commits: Commit[] }
 export interface JobRequirement { name: string; required: boolean }
-export interface JobPosting { id: string; title: string; company: string; sourceUrl: string; sample: boolean; requirements: JobRequirement[] }
+export interface JobPosting { id: string; title: string; company: string; sourceUrl: string; sample: boolean; requirements: JobRequirement[]; analysisNote?: string }
+export interface JobRoleRecommendation { title: string; match: number; skillCoverage: number; textSimilarity: number; matchedSkills: string[]; missingSkills: string[]; description: string }
 export interface SkillEvidence { repo: string; file: string; excerpt: string; commit: string; explanation: string; url?: string }
 export interface SkillAssessment { name: string; category: string; status: Status; confidence: number; evidence: SkillEvidence[]; updatedAt: string; previous?: Status; gap?: string; improvement?: string }
 export interface EvidenceGraphNode { id: string; type: 'job' | 'skill' | 'repo' | 'file' | 'commit'; label: string; col: number }

@@ -2,29 +2,24 @@ import { useState } from 'react'
 import { NavLink, Outlet, Link } from 'react-router-dom'
 import {
   LayoutDashboard,
-  Dna,
   GitBranch,
   Network,
-  Activity,
   Search,
-  FileSearch,
   Target,
-  Route,
-  FileText,
   Settings,
   Bell,
   Menu,
   X,
   ShieldCheck,
   ChevronRight,
-  Command,
   CircleHelp,
-  LogOut,
+  Bot,
+  BookOpen,
 } from 'lucide-react'
 
 import { cn } from '../utils'
 import { useApp } from '../context/AppContext'
-import { Toasts, DemoTag } from '../components/ui'
+import { Toasts } from '../components/ui'
 import { USE_MOCK } from '../api/client'
 
 const NAV = [
@@ -32,38 +27,39 @@ const NAV = [
     group: 'WORKSPACE',
     items: [
       { to: '/dashboard', label: 'Overview', icon: LayoutDashboard },
-      { to: '/career-dna', label: 'Career DNA', icon: Dna },
     ],
   },
   {
     group: 'DEVELOPER ACTIVITY',
     items: [
-      { to: '/repositories', label: 'Repositories', icon: GitBranch },
-      { to: '/evidence', label: 'Evidence explorer', icon: Network },
-      { to: '/changes', label: 'Change activity', icon: Activity },
+      { to: '/onboarding', label: 'GitHub setup', icon: GitBranch },
+      { to: '/evidence', label: 'Evidence Explorer', icon: Network },
     ],
   },
   {
     group: 'CAREER INTELLIGENCE',
     items: [
-      { to: '/job-analyzer', label: 'Job analyzer', icon: Search },
-      { to: '/job-fit', label: 'Job fit reports', icon: FileSearch },
+      { to: '/job-analyzer', label: 'Job analyzer & fit', icon: Search },
       { to: '/gaps', label: 'Skill gaps', icon: Target },
-      { to: '/roadmap', label: 'Learning roadmap', icon: Route },
-      { to: '/resume', label: 'Resume review', icon: FileText },
+    ],
+  },
+  {
+    group: 'AI CAREER TOOLS',
+    items: [
+      { to: '/ai-mentor', label: 'AI Mentor', icon: Bot },
+      { to: '/ai-roadmap', label: 'AI Learning Roadmap', icon: BookOpen },
     ],
   },
 ]
 
 export default function AppLayout() {
   const [open, setOpen] = useState(false)
-  const [q, setQ] = useState('')
 
-  const { user, changes, freshness } = useApp()
+  const { user, repo, repositories, setRepo, changes, freshness } = useApp()
 
   const displayName = user?.name || 'Guest'
   const initial = displayName.charAt(0).toUpperCase()
-  const hasGithub = Boolean(user?.githubLogin || user?.demo)
+  const hasGithub = Boolean(user?.githubLogin && !user.demo)
   const hasUpdates = changes.length > 0 || freshness !== 'fresh'
 
   const side = (
@@ -234,35 +230,23 @@ export default function AppLayout() {
           <Menu size={20} />
         </button>
 
-        {/* Search */}
-        <div className="relative w-full max-w-[430px]">
-          <Search
-            size={16}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-mute"
-          />
-
-          <input
-            className="h-10 w-full rounded-lg border border-line bg-[#FAFBF9] pl-9 pr-16 text-[13px] text-ink outline-none transition focus:border-[#8DA99B] focus:bg-white focus:ring-2 focus:ring-[#E7EFEA]"
-            placeholder="Search skills, files, commits..."
-            aria-label="Search skills, files and commits"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-          />
-
-          <span className="pointer-events-none absolute right-2.5 top-1/2 flex -translate-y-1/2 items-center gap-1 rounded border border-line bg-white px-1.5 py-1 text-[10px] text-mute">
-            <Command size={10} /> K
-          </span>
-        </div>
-
         <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
-          {USE_MOCK && (
-            <span className="hidden sm:block">
-              <DemoTag>Demo data</DemoTag>
-            </span>
+          {repositories.length > 1 && (
+            <select
+              aria-label="Active repository"
+              className="h-9 max-w-[42vw] rounded-lg border border-line bg-white px-2 text-xs text-ink sm:max-w-56 sm:px-3 sm:text-sm"
+              value={repo?.id || ''}
+              onChange={event => {
+                const selected = repositories.find(item => item.id === event.target.value)
+                if (selected) void setRepo(selected)
+              }}
+            >
+              {repositories.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+            </select>
           )}
 
           {/* GitHub connection status */}
-          <div
+          {!USE_MOCK && <div
             className={cn(
               'hidden items-center gap-2 rounded-full border px-3 py-1.5 text-xs sm:flex',
               hasGithub
@@ -276,12 +260,8 @@ export default function AppLayout() {
                 hasGithub ? 'bg-[#57916C]' : 'bg-[#A6AAA5]'
               )}
             />
-            {user?.githubLogin
-              ? user.githubLogin
-              : user?.demo
-                ? 'Demo connected'
-                : 'GitHub not connected'}
-          </div>
+            {user?.githubLogin || 'GitHub not connected'}
+          </div>}
 
           {/* Notifications */}
           <Link
@@ -309,7 +289,7 @@ export default function AppLayout() {
 
       {/* Page content */}
       <main className="mx-auto min-h-[calc(100vh-68px)] max-w-[1600px] p-4 sm:p-6 lg:p-8">
-        <Outlet context={{ q }} />
+        <Outlet />
       </main>
 
       <Toasts />

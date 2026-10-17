@@ -52,7 +52,8 @@ exports.get = asyncHandler(async (req, res) => {
     path: file.path,
     kind: fileKind(file.path),
     excerpt: file.content.split(/\r?\n/).slice(0, 6).join('\n').slice(0, 500),
-    explanation: `Retrieved from ${repository.repoFullName} at commit ${snapshot.commitSha}.`
+    explanation: `Retrieved from ${repository.repoFullName} at commit ${snapshot.commitSha}.`,
+    url: file.url
   }));
   success(res, {
     id: String(repository._id),
@@ -66,6 +67,12 @@ exports.get = asyncHandler(async (req, res) => {
     files,
     commits: commits.map(commit => ({ ...commit, files: [] }))
   });
+});
+
+exports.commits = asyncHandler(async (req, res) => {
+  const repository = await ownedRepository(req.params.id, req.user);
+  const commits = await githubService.fetchRecentCommits(req.user, repository);
+  success(res, commits);
 });
 
 exports.files = asyncHandler(async (req, res) => {
@@ -90,17 +97,23 @@ exports.analyze = asyncHandler(async (req, res) => {
   const snapshot = await githubService.fetchRepositorySnapshot(req.user, repository);
   repository.status = 'analyzing';
   await repository.save();
-  for (const job of jobs) {
-    await assessSkills({ user: req.user, job, repository, snapshot });
-    await refreshGaps(req.user, job);
+  try {
+    for (const job of jobs) {
+      await assessSkills({ user: req.user, job, repository, snapshot });
+      await refreshGaps(req.user, job);
+    }
+    repository.lastAnalyzedCommitSha = snapshot.commitSha;
+    repository.lastAnalyzedAt = new Date();
+    repository.defaultBranch = snapshot.branch;
+    repository.primaryLanguage = snapshot.language;
+    repository.status = 'analyzed';
+    await repository.save();
+    success(res, { analysisId: String(repository._id), commitSha: snapshot.commitSha, assessedJobs: jobs.length });
+  } catch (error) {
+    repository.status = 'failed';
+    await repository.save();
+    throw error;
   }
-  repository.lastAnalyzedCommitSha = snapshot.commitSha;
-  repository.lastAnalyzedAt = new Date();
-  repository.defaultBranch = snapshot.branch;
-  repository.primaryLanguage = snapshot.language;
-  repository.status = 'analyzed';
-  await repository.save();
-  success(res, { analysisId: String(repository._id), commitSha: snapshot.commitSha, assessedJobs: jobs.length });
 });
 
 exports.sync = asyncHandler(async (req, res) => {

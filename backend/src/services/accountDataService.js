@@ -7,6 +7,8 @@ const GapReport = require('../models/GapReport');
 const LearningRoadmap = require('../models/LearningRoadmap');
 const Job = require('../models/Job');
 const ResumeClaim = require('../models/ResumeClaim');
+const AIConversation = require('../models/AIConversation');
+const PersonalizedRoadmap = require('../models/PersonalizedRoadmap');
 
 async function deleteRepositoryData(userId) {
   const assessments = await SkillAssessment.find({ user: userId }).select('_id');
@@ -23,7 +25,12 @@ async function deleteRepositoryData(userId) {
 
 async function deleteUserData(userId) {
   await deleteRepositoryData(userId);
-  await Promise.all([Job.deleteMany({ user: userId }), ResumeClaim.deleteMany({ user: userId })]);
+  await Promise.all([
+    Job.deleteMany({ user: userId }),
+    ResumeClaim.deleteMany({ user: userId }),
+    AIConversation.deleteMany({ user: userId }),
+    PersonalizedRoadmap.deleteMany({ user: userId })
+  ]);
   await User.deleteOne({ _id: userId });
 }
 

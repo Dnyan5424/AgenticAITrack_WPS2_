@@ -19,16 +19,17 @@ import {
   Github,
   RefreshCw,
   GraduationCap,
-  LockKeyhole,
+  LogOut,
   Menu,
+  MessageCircle,
   ScanSearch,
   ShieldCheck,
   Sparkles,
   Users,
+  UserRound,
   X,
 } from 'lucide-react'
 import { useApp } from '../context/AppContext'
-import { DemoTag } from '../components/ui'
 import { cn } from '../utils'
 
 const requirements = [
@@ -71,7 +72,7 @@ function SectionNumber({ children }: { children: string }) {
 function Landing() {
   const reducedMotion = !!useReducedMotion()
   const navigate = useNavigate()
-  const { connectDemo, repo, job, skills, changes } = useApp()
+  const { connectDemo, repo, job, skills, changes, user, signOut, push } = useApp()
   const [mobileMenu, setMobileMenu] = useState(false)
   const [connecting, setConnecting] = useState(false)
 
@@ -84,14 +85,26 @@ function Landing() {
   const latestChange = changes[0]
 
   const startDemo = async () => {
+    if (user) {
+      navigate('/dashboard')
+      return
+    }
     if (connecting) return
 
     setConnecting(true)
     try {
       await connectDemo()
-      navigate('/repositories')
+      navigate('/dashboard')
     } finally {
       setConnecting(false)
+    }
+  }
+
+  const handleSignOut = async () => {
+    try {
+      await signOut()
+    } catch (error) {
+      push((error as Error).message, 'err')
     }
   }
 
@@ -137,15 +150,27 @@ function Landing() {
           </div>
 
           <div className="hidden items-center gap-3 sm:flex">
-            <Link className="landing-signin" to="/login">
-              Sign in
-            </Link>
+            {user ? (
+              <>
+                <Link className="landing-signin inline-flex items-center gap-2" to="/settings" aria-label={`Profile for ${user.name}`}>
+                  <span className="grid h-7 w-7 place-items-center rounded-full bg-[#e7eee8] text-xs font-semibold text-[#245b4d]">{user.name.charAt(0).toUpperCase()}</span>
+                  <UserRound size={15} />
+                  Profile
+                </Link>
+                <button className="landing-signin inline-flex cursor-pointer items-center gap-2 border-0 bg-transparent" type="button" onClick={() => void handleSignOut()}>
+                  <LogOut size={15} />
+                  Sign out
+                </button>
+              </>
+            ) : (
+              <Link className="landing-signin" to="/login">Sign in</Link>
+            )}
             <button
               className="landing-button landing-button-dark"
               onClick={startDemo}
               disabled={connecting}
             >
-              {connecting ? 'Connecting…' : 'Explore the demo'}
+              {connecting ? 'Connecting…' : user ? 'Open dashboard' : 'Explore SkillProof'}
               <ArrowUpRight size={16} />
             </button>
           </div>
@@ -172,12 +197,26 @@ function Landing() {
               <a href="#who-its-for" onClick={() => setMobileMenu(false)}>
                 Who it's for
               </a>
-              <Link to="/login">Sign in</Link>
+              {user ? (
+                <>
+                  <Link className="flex items-center gap-2" to="/settings" onClick={() => setMobileMenu(false)}>
+                    <UserRound size={16} />
+                    Profile · {user.name}
+                  </Link>
+                  <button className="flex items-center gap-2 text-left" type="button" onClick={() => { setMobileMenu(false); void handleSignOut() }}>
+                    <LogOut size={16} />
+                    Sign out
+                  </button>
+                </>
+              ) : (
+                <Link to="/login" onClick={() => setMobileMenu(false)}>Sign in</Link>
+              )}
               <button
                 className="landing-button landing-button-dark justify-center"
                 onClick={startDemo}
+                disabled={connecting}
               >
-                Explore the demo <ArrowRight size={16} />
+                {user ? 'Open dashboard' : connecting ? 'Connecting…' : 'Explore SkillProof'} <ArrowRight size={16} />
               </button>
             </div>
           </div>
@@ -222,11 +261,20 @@ function Landing() {
                 Analyze a job
                 <ArrowUpRight size={16} />
               </Link>
-            </div>
-
-            <div className="mt-5 flex items-center gap-2 text-xs text-[#777b72]">
-              <LockKeyhole size={13} />
-              <span>Sample account · No real GitHub authentication</span>
+              <Link
+                className="landing-button landing-button-light min-h-12"
+                to="/ai-roadmap"
+              >
+                <Sparkles size={16} />
+                Build a learning roadmap
+              </Link>
+              <Link
+                className="landing-button landing-button-light min-h-12"
+                to="/ai-mentor"
+              >
+                <MessageCircle size={16} />
+                Ask AI Mentor
+              </Link>
             </div>
 
             <div className="mt-12 flex flex-wrap items-center gap-x-7 gap-y-3 border-t border-[#e7e1d6] pt-6">
@@ -754,7 +802,7 @@ const partial = status === 'partial';
                 onClick={startDemo}
                 disabled={connecting}
               >
-                Explore the demo
+                Explore SkillProof
                 <ArrowRight size={16} />
               </button>
               <Link
@@ -766,9 +814,6 @@ const partial = status === 'partial';
               </Link>
             </div>
 
-            <div className="mt-5 flex justify-center">
-              <DemoTag />
-            </div>
           </div>
         </div>
       </section>

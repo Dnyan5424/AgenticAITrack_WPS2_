@@ -14,7 +14,7 @@ api.interceptors.response.use(r => r, (e: AxiosError<{ message?: string }>) => {
   const msg = e.response?.data?.message || (e.code === 'ECONNABORTED' ? 'The request timed out. Try again.' : e.message === 'Network Error' ? `Cannot reach the backend at ${BASE_URL}. Check that it is running, or enable mock mode.` : e.message)
   return Promise.reject(new Error(msg))
 })
-export async function get<T>(url: string) { return (await api.get<ApiResponse<T>>(url)).data.data }
-export async function post<T>(url: string, body?: unknown) { return (await api.post<ApiResponse<T>>(url, body)).data.data }
+export async function get<T>(url: string, timeout = 15000) { return (await api.get<ApiResponse<T>>(url, { timeout })).data.data }
+export async function post<T>(url: string, body?: unknown, timeout = 15000) { return (await api.post<ApiResponse<T>>(url, body, { timeout })).data.data }
 export async function patch<T>(url: string, body?: unknown) { return (await api.patch<ApiResponse<T>>(url, body)).data.data }
 export async function del<T>(url: string) { return (await api.delete<ApiResponse<T>>(url)).data.data }

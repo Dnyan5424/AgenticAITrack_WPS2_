@@ -5,6 +5,8 @@ const SkillEvidence = require('../models/SkillEvidence');
 const GapReport = require('../models/GapReport');
 const githubService = require('../services/githubService');
 const { parseJobDescription } = require('../services/jobParserService');
+const { fetchJobPosting, inferJobFromUrl } = require('../services/jobUrlService');
+const jobRecommendationService = require('../services/jobRecommendationService');
 const { assessSkills, refreshGaps, reportFrom } = require('../services/skillAssessmentService');
 const { success } = require('../utils/apiResponse');
 const asyncHandler = require('../utils/asyncHandler');
@@ -13,9 +15,12 @@ const publicRepositoryIds = require('../utils/publicRepositoryIds');
 function toFrontend(job) {
   return {
     id: String(job._id),
-    title: job.title,
+    title: job.title === 'Role (from pasted text)'
+      ? parseJobDescription(job.rawDescription || '').title
+      : job.title,
     company: job.company,
     sourceUrl: job.sourceUrl,
+    analysisNote: job.analysisNote || '',
     sample: false,
     requirements: [
       ...job.requiredSkills.map(name => ({ name, required: true })),
@@ -36,14 +41,17 @@ async function ownedJob(id, user) {
 }
 
 exports.analyze = asyncHandler(async (req, res) => {
-  const text = req.body.text.trim();
+  const page = req.body.text ? null : inferJobFromUrl(req.body.url) || await fetchJobPosting(req.body.url);
+  const text = (req.body.text || page.description).trim();
   const parsed = parseJobDescription(text);
+  const pageTitle = page?.title ? parseJobDescription(page.title).title : '';
   const job = await Job.create({
     user: req.user._id,
-    title: req.body.title?.trim() || parsed.title,
-    company: req.body.company?.trim() || parsed.company,
+    title: req.body.title?.trim() || (pageTitle !== 'Job role not detected' ? pageTitle : '') || parsed.title,
+    company: req.body.company?.trim() || page?.company || parsed.company,
     sourceUrl: req.body.url || '',
     rawDescription: text,
+    analysisNote: page?.analysisNote || '',
     requiredSkills: parsed.requiredSkills,
     preferredSkills: parsed.preferredSkills,
     analysisStatus: 'ready'
@@ -54,6 +62,30 @@ exports.analyze = asyncHandler(async (req, res) => {
 exports.list = asyncHandler(async (req, res) => {
   const jobs = await Job.find({ user: req.user._id }).sort({ createdAt: -1 }).limit(100);
   success(res, jobs.map(toFrontend));
+});
+
+exports.recommendations = asyncHandler(async (req, res) => {
+  const repositoryIds = await publicRepositoryIds(req.user._id);
+  const assessments = await SkillAssessment.find({
+    user: req.user._id,
+    repository: { $in: repositoryIds }
+  }).select('skill status');
+  if (!assessments.length) {
+    success(res, {
+      roles: [],
+      method: 'verified skill coverage and TF-IDF cosine similarity',
+      note: 'Analyze at least one public repository to get role suggestions.'
+    });
+    return;
+  }
+  const evidence = await SkillEvidence.find({ assessment: { $in: assessments.map(item => item._id) } })
+    .select('filePath explanation')
+    .limit(1000);
+  success(res, {
+    roles: jobRecommendationService.recommendRoles(assessments, evidence),
+    method: '80% verified skill coverage and 20% TF-IDF cosine similarity',
+    note: 'Estimated role fit from repository evidence, not live vacancies or a hiring prediction.'
+  });
 });
 
 exports.update = asyncHandler(async (req, res) => {

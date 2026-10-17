@@ -5,6 +5,7 @@ const jobSchema = new mongoose.Schema({
   title: { type: String, required: true, trim: true },
   company: { type: String, default: 'Not detected', trim: true },
   sourceUrl: { type: String, default: '' },
+  analysisNote: { type: String, default: '' },
   rawDescription: { type: String, required: true, maxlength: 50000 },
   requiredSkills: [{ type: String, trim: true }],
   preferredSkills: [{ type: String, trim: true }],

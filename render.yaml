@@ -19,10 +19,6 @@ services:
         value: https://skillproof-web.onrender.com
       - key: WATCHER_ENABLED
         value: "true"
-      - key: RESEND_API_KEY
-        sync: false
-      - key: EMAIL_FROM
-        sync: false
 
   - type: web
     name: skillproof-web

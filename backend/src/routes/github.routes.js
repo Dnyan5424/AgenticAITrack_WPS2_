@@ -1,13 +1,15 @@
 ﻿const express = require('express');
 const { z } = require('zod');
 const github = require('../controllers/github.controller');
+const githubLimiter = require('../middleware/githubRateLimit.middleware');
+const oauthLimiter = require('../middleware/oauthRateLimit.middleware');
 const authenticate = require('../middleware/auth.middleware');
 const validate = require('../middleware/validate.middleware');
 const router = express.Router();
 
-router.get('/callback', github.callback);
+router.get('/callback', oauthLimiter, github.callback);
 router.post('/webhook', github.webhook);
-router.use(authenticate);
+router.use(authenticate, githubLimiter);
 router.get('/connection', github.connection);
 router.delete('/connection', github.disconnectAccount);
 router.get('/repositories', github.repositories);

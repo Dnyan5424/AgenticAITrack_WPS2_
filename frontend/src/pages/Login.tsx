@@ -4,7 +4,6 @@ import { GitBranch, ShieldCheck } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { authService } from '../services/authService'
 import { USE_MOCK } from '../api/client'
-import { DemoTag } from '../components/ui'
 
 type Mode = 'in' | 'up'
 
@@ -74,12 +73,10 @@ export default function Login() {
       </div>
       <h1 className="mb-1 text-xl font-semibold">{mode === 'in' ? 'Welcome back' : 'Create your account'}</h1>
       <p className="mb-4 text-sm text-ink2">{mode === 'in' ? 'Sign in to continue your SkillProof workspace.' : 'Start with your name, email and a password.'}</p>
-      {USE_MOCK && <div className="mb-4"><DemoTag>Demo mode: credentials are not sent or authenticated</DemoTag></div>}
       <form onSubmit={submit} noValidate className="space-y-3">
         {mode === 'up' && field('name', 'Full name', 'text', 'name')}
         {field('email', 'Email', 'email', 'email')}
         {field('password', 'Password', 'password', mode === 'up' ? 'new-password' : 'current-password')}
-        {mode === 'in' && <div className="text-right"><Link className="text-sm text-teal underline" to="/forgot-password">Forgot password?</Link></div>}
         {submitError && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-err">
           <p>{submitError}</p>
           {duplicateEmail && <button type="button" className="mt-2 font-medium underline" onClick={() => changeMode('in')}>Sign in with this email</button>}
@@ -90,7 +87,7 @@ export default function Login() {
       <button type="button" className="btn-s w-full" onClick={() => {
         if (USE_MOCK) void connectDemo().then(() => navigate('/onboarding'))
         else authService.loginWithGithub()
-      }}><GitBranch size={16} />Continue with GitHub</button>
+      }}><GitBranch size={16} />{USE_MOCK ? 'Continue' : 'Continue with GitHub'}</button>
       <p className="mt-3 text-center text-xs text-ink2">GitHub authorization lets SkillProof read your public repositories so you can choose which one to analyze.</p>
     </div>
   </div>

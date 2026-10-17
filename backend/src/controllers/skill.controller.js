@@ -10,7 +10,17 @@ const asyncHandler = require('../utils/asyncHandler');
 exports.list = asyncHandler(async (req, res) => {
   const jobs = await Job.find({ user: req.user._id }).select('_id requiredSkills preferredSkills');
   const repositoryIds = await publicRepositoryIds(req.user._id);
-  const assessments = await SkillAssessment.find({ user: req.user._id, repository: { $in: repositoryIds } }).populate('repository', 'repoFullName');
+  const query = { user: req.user._id, repository: { $in: repositoryIds } };
+  if (req.query.jobId) query.job = req.query.jobId;
+  const assessments = await SkillAssessment.find(query).populate('repository', 'repoFullName');
+  const evidenceRows = await SkillEvidence.find({ assessment: { $in: assessments.map(item => item._id) } }).sort({ createdAt: -1 });
+  const evidenceByAssessment = new Map();
+  for (const item of evidenceRows) {
+    const key = String(item.assessment);
+    const rows = evidenceByAssessment.get(key) || [];
+    if (rows.length < 8) rows.push(item);
+    evidenceByAssessment.set(key, rows);
+  }
   const grouped = new Map();
   for (const item of assessments) {
     const existing = grouped.get(item.skill) || [];
@@ -27,7 +37,14 @@ exports.list = asyncHandler(async (req, res) => {
       reason: best.reason,
       gap: best.gap,
       updatedAt: best.updatedAt,
-      evidence: []
+      evidence: (evidenceByAssessment.get(String(best._id)) || []).map(item => ({
+        repo: best.repository?.repoFullName || '',
+        file: item.filePath,
+        excerpt: item.snippet,
+        commit: item.commitSha,
+        explanation: item.explanation,
+        url: item.fileUrl
+      }))
     };
   });
   success(res, result);
@@ -52,12 +69,17 @@ exports.evidence = asyncHandler(async (req, res) => {
 exports.careerDna = asyncHandler(async (req, res) => {
   const jobs = await Job.find({ user: req.user._id });
   const repositoryIds = await publicRepositoryIds(req.user._id);
-  const assessments = await SkillAssessment.find({ user: req.user._id, repository: { $in: repositoryIds } });
+  const assessments = await SkillAssessment.find({ user: req.user._id, repository: { $in: repositoryIds } }).populate('repository', 'repoFullName');
+  const evidenceRows = await SkillEvidence.find({ assessment: { $in: assessments.map(item => item._id) } }).sort({ createdAt: -1 });
   const skillNames = [...new Set(jobs.flatMap(job => [...job.requiredSkills, ...job.preferredSkills]))];
   const result = skillNames.map(name => {
     const rows = assessments.filter(item => item.skill.toLowerCase() === name.toLowerCase());
     const best = rows.find(item => item.status === 'demonstrated') || rows.find(item => item.status === 'partial') || rows[0];
-    return { name, category: 'job-aligned', status: best?.status || 'not_demonstrated_in_this_scope', confidence: best?.confidence || 0, reason: best?.reason || 'Not demonstrated in this scope.', evidence: [], updatedAt: best?.updatedAt };
+    const evidence = best ? evidenceRows.filter(item => String(item.assessment) === String(best._id)).slice(0, 8).map(item => ({
+      repo: best.repository?.repoFullName || '', file: item.filePath, excerpt: item.snippet,
+      commit: item.commitSha, explanation: item.explanation, url: item.fileUrl
+    })) : [];
+    return { name, category: 'job-aligned', status: best?.status || 'not_demonstrated_in_this_scope', confidence: best?.confidence || 0, reason: best?.reason || 'Not demonstrated in this scope.', evidence, updatedAt: best?.updatedAt };
   });
   success(res, result);
 });

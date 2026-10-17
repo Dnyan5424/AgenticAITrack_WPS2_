@@ -2,8 +2,6 @@ const SkillAssessment = require('../models/SkillAssessment');
 const SkillEvidence = require('../models/SkillEvidence');
 const GapReport = require('../models/GapReport');
 const { RULES, ruleFor, canonicalSkill } = require('../utils/skillRules');
-const { groundedExplanation } = require('./embeddingService');
-const logger = require('../utils/logger');
 const env = require('../config/env');
 
 const NOT_DEMONSTRATED = 'not_demonstrated_in_this_scope';
@@ -62,6 +60,13 @@ function classify(candidates) {
   return { status: 'partial', confidence: 0.55 };
 }
 
+function assessmentExplanation(skill, supporting) {
+  if (!supporting.length) {
+    return 'Not demonstrated in this scope. The configured repository files analyzed for this job did not contain verifiable evidence for this skill.';
+  }
+  return `${supporting.length} repository file${supporting.length === 1 ? '' : 's'} contain direct ${skill} references. This is evidence within the configured repository scope, not a claim about skill outside it.`;
+}
+
 async function assessSkills({ user, job, repository, snapshot, skills, onlySkills = null }) {
   const targetSkills = onlySkills || [...new Set([...job.requiredSkills, ...job.preferredSkills])];
   const results = [];
@@ -70,18 +75,7 @@ async function assessSkills({ user, job, repository, snapshot, skills, onlySkill
     const candidates = evidenceCandidates(skill, snapshot.files, snapshot.commitSha);
     const classification = classify(candidates);
     const supporting = classification.status === NOT_DEMONSTRATED ? [] : candidates;
-    let reason = supporting.length
-      ? `${supporting.length} repository file${supporting.length === 1 ? '' : 's'} contain direct ${skill} references. This is evidence within the configured repository scope, not a claim about skill outside it.`
-      : 'Not demonstrated in this scope. The configured repository files analyzed for this job did not contain verifiable evidence for this skill.';
-    if (supporting.length) {
-      let generated = null;
-      try {
-        generated = await groundedExplanation(skill, supporting);
-      } catch (error) {
-        logger.warn('Gemini explanation failed; using deterministic evidence explanation', { skill, message: error.message });
-      }
-      if (generated) reason = generated;
-    }
+    const reason = assessmentExplanation(skill, supporting);
     const assessment = await SkillAssessment.findOneAndUpdate(
       { user: user._id, job: job._id, repository: repository._id, skill },
       { $set: {
@@ -178,4 +172,4 @@ function reportFrom(assessments, job) {
   };
 }
 
-module.exports = { NOT_DEMONSTRATED, classify, assessSkills, affectedSkills, isSkillAffected, refreshGaps, reportFrom, evidenceCandidates };
+module.exports = { NOT_DEMONSTRATED, classify, assessmentExplanation, assessSkills, affectedSkills, isSkillAffected, refreshGaps, reportFrom, evidenceCandidates };

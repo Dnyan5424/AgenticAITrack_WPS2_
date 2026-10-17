@@ -12,6 +12,7 @@ const repositoryRoutes = require('./routes/repository.routes');
 const changeRoutes = require('./routes/change.routes');
 const roadmapRoutes = require('./routes/roadmap.routes');
 const resumeRoutes = require('./routes/resume.routes');
+const aiRoutes = require('./routes/ai.routes');
 
 const app = express();
 app.disable('x-powered-by');
@@ -33,12 +34,10 @@ app.get('/api/health', (req, res) => res.json({
     integrations: {
       github: env.githubConfigured ? 'configured' : 'unconfigured',
       gemini: env.geminiConfigured ? 'configured' : 'unconfigured',
-      passwordReset: env.passwordResetConfigured ? 'configured' : 'unconfigured'
     },
     featuresRequiringConfiguration: [
       ...(!env.githubConfigured ? ['GitHub OAuth and private-repository access require GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET'] : []),
-      ...(!env.geminiConfigured ? ['AI-assisted evidence explanations require GEMINI_API_KEY; deterministic assessment remains available'] : []),
-      ...(!env.passwordResetConfigured ? ['Password recovery email requires RESEND_API_KEY and EMAIL_FROM'] : [])
+      ...(!env.geminiConfigured ? ['AI Mentor and personalized AI roadmaps require GEMINI_API_KEY; repository assessments use deterministic rules'] : []),
     ]
   }
 }));
@@ -50,6 +49,7 @@ app.use('/api/repositories', repositoryRoutes);
 app.use('/api', changeRoutes);
 app.use('/api', roadmapRoutes);
 app.use('/api/resume', resumeRoutes);
+app.use('/api/ai', aiRoutes);
 app.use((req, res, next) => {
   const error = new Error(`Route not found: ${req.method} ${req.originalUrl}`);
   error.status = 404;

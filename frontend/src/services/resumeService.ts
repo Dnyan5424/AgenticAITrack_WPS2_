@@ -1,7 +1,8 @@
 import { post, EP, USE_MOCK, wait, type ResumeClaim, type SkillAssessment } from './store'
+const RESUME_ANALYSIS_TIMEOUT = 120000
 export const resumeService = {
   async analyze(text: string, skills: SkillAssessment[]): Promise<ResumeClaim[]> {
-    if (!USE_MOCK) return post(EP.resume, { text })
+    if (!USE_MOCK) return post(EP.resume, { text }, RESUME_ANALYSIS_TIMEOUT)
     await wait(700)
     return skills.filter(s => text.toLowerCase().includes(s.name.toLowerCase())).map(s => s.status === 'demonstrated'
       ? { claim: s.name, verdict: 'supported', note: `Evidence in ${s.evidence[0]?.file}.` } : s.status === 'partial'
