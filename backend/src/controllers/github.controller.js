@@ -51,6 +51,23 @@ exports.connection = asyncHandler(async (req, res) => {
   });
 });
 
+exports.disconnectAccount = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id).select('+passwordHash +githubAccessToken');
+  if (user?.githubUsername && !user.passwordHash) {
+    const error = new Error('Set a password through Forgot password before disconnecting GitHub, so you can still sign in.');
+    error.status = 409;
+    throw error;
+  }
+  if (user?.githubUsername) {
+    const { deleteRepositoryData } = require('../services/accountDataService');
+    await deleteRepositoryData(user._id);
+    user.githubUsername = undefined;
+    user.githubAccessToken = undefined;
+    await user.save();
+  }
+  success(res, null, 'GitHub disconnected. Connected repositories and their assessments were removed.');
+});
+
 exports.repositories = asyncHandler(async (req, res) => {
   const repositories = await githubService.listRepositories(req.user);
   success(res, repositories.map(repository => ({

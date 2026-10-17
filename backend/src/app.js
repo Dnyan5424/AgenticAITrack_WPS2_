@@ -32,11 +32,13 @@ app.get('/api/health', (req, res) => res.json({
     status: 'ok',
     integrations: {
       github: env.githubConfigured ? 'configured' : 'unconfigured',
-      gemini: env.geminiConfigured ? 'configured' : 'unconfigured'
+      gemini: env.geminiConfigured ? 'configured' : 'unconfigured',
+      passwordReset: env.passwordResetConfigured ? 'configured' : 'unconfigured'
     },
     featuresRequiringConfiguration: [
       ...(!env.githubConfigured ? ['GitHub OAuth and private-repository access require GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET'] : []),
-      ...(!env.geminiConfigured ? ['AI-assisted evidence explanations require GEMINI_API_KEY; deterministic assessment remains available'] : [])
+      ...(!env.geminiConfigured ? ['AI-assisted evidence explanations require GEMINI_API_KEY; deterministic assessment remains available'] : []),
+      ...(!env.passwordResetConfigured ? ['Password recovery email requires RESEND_API_KEY and EMAIL_FROM'] : [])
     ]
   }
 }));

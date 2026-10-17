@@ -1,44 +1,97 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { ShieldCheck, GitBranch } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { GitBranch, ShieldCheck } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { authService } from '../services/authService'
 import { USE_MOCK } from '../api/client'
 import { DemoTag } from '../components/ui'
+
+type Mode = 'in' | 'up'
+
 export default function Login() {
-  const [mode, setMode] = useState<'in' | 'up'>('in'); const [f, setF] = useState({ name: '', email: '', password: '' }); const [err, setErr] = useState<Record<string, string>>({}); const [load, setLoad] = useState(false)
-  const { connectDemo, push, setAuthenticatedUser } = useApp(); const nav = useNavigate()
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault(); const x: Record<string, string> = {}
-    if (mode === 'up' && !f.name.trim()) x.name = 'Enter your name.'
-    if (!/^\S+@\S+\.\S+$/.test(f.email)) x.email = 'Enter a valid email address.'
-    if (f.password.length < 8) x.password = 'Use at least 8 characters.'
-    setErr(x); if (Object.keys(x).length) return
-    setLoad(true)
+  const [mode, setMode] = useState<Mode>('in')
+  const [form, setForm] = useState({ name: '', email: '', password: '' })
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [submitError, setSubmitError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const { connectDemo, setAuthenticatedUser } = useApp()
+  const navigate = useNavigate()
+
+  const changeMode = (next: Mode) => {
+    setMode(next)
+    setSubmitError('')
+    setErrors({})
+  }
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    const nextErrors: Record<string, string> = {}
+    if (mode === 'up' && !form.name.trim()) nextErrors.name = 'Enter your name.'
+    if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) nextErrors.email = 'Enter a valid email address.'
+    if (form.password.length < (mode === 'up' ? 8 : 1)) nextErrors.password = mode === 'up' ? 'Use at least 8 characters.' : 'Enter your password.'
+    setErrors(nextErrors)
+    setSubmitError('')
+    if (Object.keys(nextErrors).length) return
+
+    setLoading(true)
     try {
       if (USE_MOCK) {
-        push('Mock mode: email sign-in is not performed. Opening the demo workspace instead.')
         await connectDemo()
       } else {
         const account = mode === 'up'
-          ? await authService.register({ name: f.name.trim(), email: f.email.trim(), password: f.password })
-          : await authService.login({ email: f.email.trim(), password: f.password })
+          ? await authService.register({ name: form.name.trim(), email: form.email.trim(), password: form.password })
+          : await authService.login({ email: form.email.trim(), password: form.password })
         setAuthenticatedUser(account)
       }
-      nav('/dashboard')
+      navigate('/onboarding')
     } catch (error) {
-      push((error as Error).message || 'Unable to authenticate. Please try again.', 'err')
+      setSubmitError((error as Error).message || 'Unable to authenticate. Please try again.')
     } finally {
-      setLoad(false)
+      setLoading(false)
     }
   }
-  const field = (k: keyof typeof f, label: string, type = 'text') => <div><label htmlFor={k} className="mb-1 block text-sm font-medium">{label}</label><input id={k} type={type} className="input" value={f[k]} aria-invalid={!!err[k]} aria-describedby={err[k] ? k + '-e' : undefined} onChange={e => setF({ ...f, [k]: e.target.value })} />{err[k] && <p id={k + '-e'} className="mt-1 text-xs text-err">{err[k]}</p>}</div>
-  return <div className="grid min-h-screen place-items-center p-4"><div className="card w-full max-w-md p-6">
-    <Link to="/" className="mb-4 flex items-center gap-2 font-head text-lg font-semibold"><ShieldCheck className="text-teal" />SkillProof</Link>
-    <div className="mb-4 flex gap-1 rounded-xl bg-soft p-1" role="tablist">{(['in', 'up'] as const).map(m => <button key={m} role="tab" aria-selected={mode === m} onClick={() => setMode(m)} className={`flex-1 rounded-lg py-2 text-sm ${mode === m ? 'bg-white font-medium shadow-sm' : 'text-ink2'}`}>{m === 'in' ? 'Sign in' : 'Create account'}</button>)}</div>
-    {USE_MOCK && <div className="mb-4"><DemoTag>Demo mode: nothing is authenticated</DemoTag></div>}
-    <form onSubmit={submit} noValidate className="space-y-3">{mode === 'up' && field('name', 'Full name')}{field('email', 'Email', 'email')}{field('password', 'Password', 'password')}<button className="btn-p w-full" disabled={load}>{load ? 'Please wait…' : mode === 'in' ? 'Sign in' : 'Create account'}</button></form>
-    <div className="my-4 text-center text-xs text-mute">or</div>
-    <button className="btn-s w-full" onClick={async () => { if (USE_MOCK) { await connectDemo(); nav('/dashboard') } else authService.loginWithGithub() }}><GitBranch size={16} />Continue with GitHub</button>
-  </div></div>
+
+  const field = (key: keyof typeof form, label: string, type = 'text', autoComplete?: string) => (
+    <div key={key}>
+      <label htmlFor={key} className="mb-1 block text-sm font-medium">{label}</label>
+      <input id={key} type={type} autoComplete={autoComplete} className="input w-full" value={form[key]}
+        aria-invalid={Boolean(errors[key])} aria-describedby={errors[key] ? `${key}-error` : undefined}
+        onChange={event => setForm(current => ({ ...current, [key]: event.target.value }))} />
+      {errors[key] && <p id={`${key}-error`} className="mt-1 text-xs text-err">{errors[key]}</p>}
+    </div>
+  )
+
+  const duplicateEmail = submitError.toLowerCase().includes('already exists')
+
+  return <div className="grid min-h-screen place-items-center p-4">
+    <div className="card w-full max-w-md p-6">
+      <Link to="/" className="mb-5 flex items-center gap-2 font-head text-lg font-semibold"><ShieldCheck className="text-teal" />SkillProof</Link>
+      <div className="mb-4 flex gap-1 rounded-xl bg-soft p-1" role="tablist" aria-label="Account access">
+        {(['in', 'up'] as const).map(item => <button key={item} type="button" role="tab" aria-selected={mode === item}
+          onClick={() => changeMode(item)} className={`flex-1 rounded-lg py-2 text-sm ${mode === item ? 'bg-white font-medium shadow-sm' : 'text-ink2'}`}>
+          {item === 'in' ? 'Sign in' : 'Create account'}
+        </button>)}
+      </div>
+      <h1 className="mb-1 text-xl font-semibold">{mode === 'in' ? 'Welcome back' : 'Create your account'}</h1>
+      <p className="mb-4 text-sm text-ink2">{mode === 'in' ? 'Sign in to continue your SkillProof workspace.' : 'Start with your name, email and a password.'}</p>
+      {USE_MOCK && <div className="mb-4"><DemoTag>Demo mode: credentials are not sent or authenticated</DemoTag></div>}
+      <form onSubmit={submit} noValidate className="space-y-3">
+        {mode === 'up' && field('name', 'Full name', 'text', 'name')}
+        {field('email', 'Email', 'email', 'email')}
+        {field('password', 'Password', 'password', mode === 'up' ? 'new-password' : 'current-password')}
+        {mode === 'in' && <div className="text-right"><Link className="text-sm text-teal underline" to="/forgot-password">Forgot password?</Link></div>}
+        {submitError && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-err">
+          <p>{submitError}</p>
+          {duplicateEmail && <button type="button" className="mt-2 font-medium underline" onClick={() => changeMode('in')}>Sign in with this email</button>}
+        </div>}
+        <button className="btn-p w-full" disabled={loading}>{loading ? 'Please wait…' : mode === 'in' ? 'Sign in' : 'Create account'}</button>
+      </form>
+      <div className="my-4 text-center text-xs text-mute">or</div>
+      <button type="button" className="btn-s w-full" onClick={() => {
+        if (USE_MOCK) void connectDemo().then(() => navigate('/onboarding'))
+        else authService.loginWithGithub()
+      }}><GitBranch size={16} />Continue with GitHub</button>
+      <p className="mt-3 text-center text-xs text-ink2">GitHub authorization lets SkillProof read your public repositories so you can choose which one to analyze.</p>
+    </div>
+  </div>
 }

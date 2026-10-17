@@ -17,7 +17,7 @@ export function Dashboard() {
     <div className="grid gap-4 md:grid-cols-3">
       <div className="card p-5"><div className="text-xs text-mute">Job-fit score (heuristic)</div><div className="font-head text-4xl font-bold text-teal">{job ? fit.score + '%' : '—'}</div><div className="text-xs text-ink2">{job ? `${fit.got} of ${fit.max} points · ${job.title}` : 'No job selected'}</div>
         <div className="mt-2 h-20"><ResponsiveContainer><AreaChart data={trend}><XAxis dataKey="d" hide /><Tooltip /><Area dataKey="v" stroke="#0F766E" fill="#E5F4F1" /></AreaChart></ResponsiveContainer></div></div>
-      <div className="card space-y-3 p-5"><Meta k="GitHub account" v={user.githubLogin} /><Meta k="Repositories" v="1 connected" /><Meta k="Latest analysed commit" v={<span className="font-mono">{repo.analyzedSha}</span>} /><Meta k="Last successful assessment" v={fmt(lastAssessed)} /></div>
+      <div className="card space-y-3 p-5"><Meta k="GitHub account" v={user.githubLogin} /><Meta k="Repository" v={repo.name} /><Meta k="Latest analysed commit" v={<span className="font-mono">{repo.analyzedSha}</span>} /><Meta k="Last successful assessment" v={fmt(lastAssessed)} /></div>
       <div className="card p-5"><div className="text-xs text-mute">Recommended next action</div><p className="mt-1 font-medium">{next[0]}</p><Link to={next[1]} className="btn-p mt-3">Go</Link></div></div>
     <div className="mt-4 grid gap-4 md:grid-cols-2">
       <div className="card p-5"><h2 className="font-semibold">Demonstrated skills ({demo.length})</h2><div className="mt-3 flex flex-wrap gap-2">{demo.map(s => <span key={s.name} className="rounded-full bg-green-50 px-3 py-1 text-xs text-ok">{s.name}</span>)}</div></div>
@@ -37,14 +37,14 @@ export function CareerDNA() {
     {!list.length && <Empty title="No matching skills" text="Try a different filter or search term." />}</>
 }
 export function Repositories() {
-  const { user, repo, connectDemo, disconnect, analyzeRepo, busy } = useApp(); const [q, setQ] = useState(''); const [m, setM] = useState(false)
+  const { user, repo, connectDemo, disconnect, analyzeRepo, busy, push } = useApp(); const [q, setQ] = useState(''); const [m, setM] = useState(false)
   return <><PageHead title="Repositories" sub="Connect GitHub and choose which repositories SkillProof may analyse.">{!user && <button className="btn-p" onClick={() => USE_MOCK ? connectDemo() : authService.loginWithGithub()} disabled={busy}><GitBranch size={16} />{USE_MOCK ? 'Connect demo account' : 'Connect with GitHub'}</button>}{user && <button className="btn-s" onClick={() => setM(true)}>Disconnect</button>}</PageHead>
     {!user || !repo ? <Empty title="GitHub is not connected" text={USE_MOCK ? 'Demo mode uses a simulated account and sample repository.' : 'You will be redirected to GitHub to authorise read access. Tokens are never pasted here.'} /> : <>
       <input aria-label="Search repositories" className="input mb-4 max-w-sm" placeholder="Search repositories" value={q} onChange={e => setQ(e.target.value)} />
       {repo.name.includes(q.toLowerCase()) && <div className="card p-5"><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-mono font-semibold">{repo.name}</h3><p className="mt-1 text-sm text-ink2">{repo.description}</p></div>{USE_MOCK && <DemoTag />}</div>
         <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-5"><Meta k="Language" v={repo.language} /><Meta k="Default branch" v={repo.branch} /><Meta k="Latest SHA" v={<span className="font-mono">{repo.latestSha}</span>} /><Meta k="Analysed SHA" v={<span className="font-mono">{repo.analyzedSha}</span>} /><Meta k="Analysed at" v={fmt(repo.analyzedAt)} /></div>
         <div className="mt-4 flex gap-2"><button className="btn-p" onClick={analyzeRepo} disabled={busy}><RefreshCw size={14} className={busy ? 'animate-spin' : ''} />{busy ? 'Analysing…' : 'Analyse now'}</button><Link className="btn-s" to={`/repositories/${repo.id}`}>View evidence</Link></div></div>}</>}
-    <Modal open={m} title="Disconnect GitHub?" text="Repositories and assessments will be cleared from this session." confirm="Disconnect" onClose={() => setM(false)} onOk={disconnect} /></>
+    <Modal open={m} title="Disconnect GitHub?" text="This removes connected repositories and their assessments. Your SkillProof account remains signed in." confirm="Disconnect" onClose={() => setM(false)} onOk={() => void disconnect().catch(error => push((error as Error).message, 'err'))} /></>
 }
 const KI = { source: FileCode2, sql: Database, test: TestTube2, deploy: Container, doc: FileText }
 export function RepoDetails() {
@@ -58,13 +58,27 @@ export function RepoDetails() {
         <div className="mt-3 flex flex-wrap gap-1">{skills.filter(s => s.evidence.some(e => e.file === sel.path)).map(s => <Badge key={s.name} s={s.status} />)}</div></> : <p className="text-sm text-ink2">Select a file to see its code evidence, explanation and related skills.</p>}</div></div></>
 }
 export function Settings() {
-  const { user, repo, disconnect, push } = useApp(); const [m, setM] = useState(false); const [n, setN] = useState({ commit: true, gap: true, email: false })
-  const tog = (k: keyof typeof n, l: string) => <label className="flex items-center justify-between py-2 text-sm">{l}<input type="checkbox" className="h-4 w-4 accent-teal" checked={n[k]} onChange={e => setN({ ...n, [k]: e.target.checked })} /></label>
+  const { user, repo, disconnect, signOut, deleteAccount, push } = useApp()
+  const [disconnectOpen, setDisconnectOpen] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState('')
+  const [working, setWorking] = useState(false)
+  const [n, setN] = useState({ commit: true, gap: true, email: false })
+  const tog = (k: keyof typeof n, label: string) => <label className="flex items-center justify-between py-2 text-sm">{label}<input type="checkbox" className="h-4 w-4 accent-teal" checked={n[k]} onChange={e => setN(current => ({ ...current, [k]: e.target.checked }))} /></label>
+  const unlinkGitHub = async () => {
+    setWorking(true)
+    try { await disconnect() } catch (error) { push((error as Error).message, 'err') } finally { setWorking(false) }
+  }
+  const removeAccount = async () => {
+    setWorking(true)
+    try { await deleteAccount() } catch (error) { push((error as Error).message, 'err') } finally { setWorking(false) }
+  }
   return <><PageHead title="Settings" />
     <div className="grid gap-4 md:grid-cols-2">
-      <div className="card p-5"><h2 className="font-semibold">Profile</h2><div className="mt-3 space-y-2"><Meta k="Name" v={user?.name || 'Not signed in'} /><Meta k="Email" v={user?.email || '—'} /></div></div>
-      <div className="card p-5"><h2 className="font-semibold">GitHub connection</h2><div className="mt-3 space-y-2"><Meta k="Status" v={user ? 'Connected (simulated)' : 'Not connected'} /><Meta k="Repositories" v={repo?.name || 'None'} /><Meta k="Change detection" v={user ? 'Simulated in demo mode; real webhooks live in the backend' : 'Off'} /><Meta k="Last synchronisation" v={fmt(repo?.analyzedAt)} /></div></div>
-      <div className="card p-5"><h2 className="font-semibold">Notifications</h2>{tog('commit', 'Notify when a commit changes an assessment')}{tog('gap', 'Notify when a gap is resolved')}{tog('email', 'Email digest')}<button className="btn-s mt-2" onClick={() => push('Preferences saved locally (mock).', 'ok')}>Save preferences</button></div>
-      <div className="card p-5"><h2 className="font-semibold">Privacy</h2><p className="mt-2 text-sm text-ink2">SkillProof reads repository contents you connect. It never asks for tokens. Disconnecting removes assessments from this session.</p><button className="btn mt-3 border border-err text-err" disabled={!user} onClick={() => setM(true)}>Disconnect GitHub</button></div></div>
-    <Modal open={m} title="Disconnect GitHub?" text="This clears repositories, assessments and change history." confirm="Disconnect" onClose={() => setM(false)} onOk={disconnect} /></>
+      <div className="card p-5"><h2 className="font-semibold">Account</h2><div className="mt-3 space-y-2"><Meta k="Name" v={user?.name || 'Not signed in'} /><Meta k="Email" v={user?.email || '—'} /></div><div className="mt-4 flex flex-wrap gap-3"><button className="btn-s" disabled={!user || working} onClick={() => { setWorking(true); void signOut().catch(error => push((error as Error).message, 'err')).finally(() => setWorking(false)) }}>Sign out</button><Link className="btn-s" to="/forgot-password">Set or reset password</Link></div></div>
+      <div className="card p-5"><h2 className="font-semibold">GitHub connection</h2><div className="mt-3 space-y-2"><Meta k="Status" v={user?.githubLogin ? `Connected as ${user.githubLogin}` : USE_MOCK && user ? 'Demo connection' : 'Not connected'} /><Meta k="Repository" v={repo?.name || 'None selected'} /><Meta k="Access" v="Read access is used only for public repositories you choose." /></div>{user?.githubLogin && <button className="btn mt-4 border border-err text-err" disabled={working} onClick={() => setDisconnectOpen(true)}>Disconnect GitHub</button>}{user && !user.githubLogin && <button className="btn-s mt-4" onClick={() => authService.loginWithGithub()}>Connect GitHub</button>}</div>
+      <div className="card p-5"><h2 className="font-semibold">Notifications</h2>{tog('commit', 'Notify when a commit changes an assessment')}{tog('gap', 'Notify when a gap is resolved')}{tog('email', 'Email digest')}<button className="btn-s mt-2" onClick={() => push('Preferences saved locally.', 'ok')}>Save preferences</button></div>
+      <div className="card p-5"><h2 className="font-semibold">Delete account</h2><p className="mt-2 text-sm text-ink2">This permanently deletes your profile, connected repositories, jobs and assessment data. This cannot be undone.</p><label htmlFor="delete-account-confirm" className="mt-4 block text-sm">Type <strong>DELETE</strong> to confirm</label><input id="delete-account-confirm" className="input mt-1 w-full" value={deleteConfirm} onChange={event => setDeleteConfirm(event.target.value)} /><button className="btn mt-3 border border-err bg-err text-white" disabled={!user || USE_MOCK || working || deleteConfirm !== 'DELETE'} onClick={() => void removeAccount()}>{working ? 'Working…' : 'Permanently delete account'}</button>{USE_MOCK && <p className="mt-2 text-xs text-mute">Account deletion requires a live account.</p>}</div>
+    </div>
+    <Modal open={disconnectOpen} title="Disconnect GitHub?" text="This removes your connected repository, evidence and assessments. Your SkillProof account and jobs remain." confirm="Disconnect GitHub" onClose={() => setDisconnectOpen(false)} onOk={() => void unlinkGitHub()} />
+  </>
 }

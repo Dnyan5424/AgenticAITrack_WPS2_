@@ -7,7 +7,10 @@ const userSchema = new mongoose.Schema({
   githubUsername: { type: String, trim: true },
   githubAccessToken: { type: String, select: false },
   oauthStateHash: { type: String, select: false },
-  oauthStateExpiresAt: { type: Date, select: false }
+  oauthStateExpiresAt: { type: Date, select: false },
+  passwordResetTokenHash: { type: String, select: false },
+  passwordResetExpiresAt: { type: Date, select: false },
+  tokenVersion: { type: Number, default: 0 }
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);

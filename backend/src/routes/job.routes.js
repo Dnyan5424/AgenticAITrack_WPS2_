@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const { z } = require('zod');
 const job = require('../controllers/job.controller');
 const authenticate = require('../middleware/auth.middleware');
@@ -13,9 +13,15 @@ router.post('/analyze', validate(z.object({ body: z.object({
   company: z.string().trim().max(150).optional()
 }) })), job.analyze);
 router.get('/', job.list);
-router.get('/:id/report', validate(z.object({ params: z.object({ id: z.string().regex(/^[a-f\\d]{24}$/i) }) })), job.report);
-router.post('/:id/assess', validate(z.object({ params: z.object({ id: z.string().regex(/^[a-f\\d]{24}$/i) }) })), job.assess);
-router.get('/:id', validate(z.object({ params: z.object({ id: z.string().regex(/^[a-f\\d]{24}$/i) }) })), async (req, res, next) => {
+router.patch('/:id', validate(z.object({
+  params: z.object({ id: z.string().regex(/^[a-f\d]{24}$/i) }),
+  body: z.object({ requirements: z.array(z.object({
+    name: z.string().trim().min(1).max(80), required: z.boolean()
+  })).min(1).max(100) })
+})), job.update);
+router.get('/:id/report', validate(z.object({ params: z.object({ id: z.string().regex(/^[a-f\d]{24}$/i) }) })), job.report);
+router.post('/:id/assess', validate(z.object({ params: z.object({ id: z.string().regex(/^[a-f\d]{24}$/i) }) })), job.assess);
+router.get('/:id', validate(z.object({ params: z.object({ id: z.string().regex(/^[a-f\d]{24}$/i) }) })), async (req, res, next) => {
   try {
     const found = await job.getOwnedJob(req.params.id, req.user);
     const { success } = require('../utils/apiResponse');

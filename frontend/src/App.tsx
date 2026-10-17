@@ -6,9 +6,13 @@ import { Dashboard, CareerDNA, Repositories, RepoDetails, Settings } from './pag
 import { JobAnalyzer, JobFit, Gaps } from './pages/Jobs'
 import { Changes, Roadmap, Resume } from './pages/Activity'
 import EvidenceExplorer from './pages/EvidenceExplorer'
+import { ForgotPassword, ResetPassword } from './pages/PasswordRecovery'
+import Onboarding from './pages/Onboarding'
 export default function App() {
   return <Routes>
     <Route path="/" element={<Landing />} /><Route path="/login" element={<Login />} />
+    <Route path="/forgot-password" element={<ForgotPassword />} /><Route path="/reset-password" element={<ResetPassword />} />
+    <Route path="/onboarding" element={<Onboarding />} />
     <Route element={<AppLayout />}>
       <Route path="/dashboard" element={<Dashboard />} /><Route path="/career-dna" element={<CareerDNA />} />
       <Route path="/repositories" element={<Repositories />} /><Route path="/repositories/:id" element={<RepoDetails />} />

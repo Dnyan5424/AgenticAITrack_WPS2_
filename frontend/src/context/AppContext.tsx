@@ -4,6 +4,7 @@ import { USE_MOCK } from '../api/client'
 import type { Freshness, JobPosting, Repository, RepositoryChange, RoadmapTask, SkillAssessment, User } from '../types'
 import { authService } from '../services/authService'
 import { githubService } from '../services/githubService'
+import { repositoryService } from '../services/repositoryService'
 import { jobService } from '../services/jobService'
 import { skillService } from '../services/skillService'
 import { roadmapService } from '../services/roadmapService'
@@ -13,7 +14,7 @@ export interface Toast { id: number; msg: string; tone: 'ok' | 'err' | 'info' }
 interface Ctx {
   user: User | null; repo: Repository | null; job: JobPosting | null; skills: SkillAssessment[]; changes: RepositoryChange[]; tasks: RoadmapTask[]
   freshness: Freshness; lastAssessed?: string; busy: boolean; toasts: Toast[]; fit: ReturnType<typeof fitScore>
-  connectDemo(): Promise<void>; disconnect(): void; setJob(j: JobPosting): Promise<void>; analyzeRepo(): Promise<void>; simulateCommit(): void
+  connectDemo(): Promise<void>; disconnect(): Promise<void>; signOut(): Promise<void>; deleteAccount(): Promise<void>; setRepo(repo: Repository | null): void; setJob(j: JobPosting): Promise<void>; analyzeRepo(): Promise<void>; simulateCommit(): void
   setAuthenticatedUser(user: User): void; toggleTask(id: string): void; push(msg: string, tone?: Toast['tone']): void; dismiss(id: number): void; setSkills(s: SkillAssessment[]): void
 }
 const C = createContext<Ctx>(null!)
@@ -42,15 +43,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setBusy(true)
     authService.me()
       .then(async account => {
-        setUser({ ...account, demo: false })
-        if (!returnedFromOAuth) return
-        const [connection, repositories] = await Promise.all([githubService.connection(), githubService.repositories()])
-        if (!connection.connected) throw new Error('GitHub account is not connected. Please authorize GitHub again.')
+        const [connection, repositories, jobs, assessments] = await Promise.all([
+          githubService.connection(), repositoryService.list(), jobService.list(), skillService.list()
+        ])
         setUser({ ...account, githubLogin: connection.login || account.githubLogin, demo: false })
         setRepo(repositories[0] || null)
-        setLast(new Date().toISOString())
-        push(`Connected GitHub account ${connection.login || account.name}.`, 'ok')
-        navigate('/repositories', { replace: true })
+        setJobS(jobs[0] || null)
+        setSkills(assessments)
+        if (repositories[0]?.analyzedAt) setLast(repositories[0].analyzedAt)
+        if (returnedFromOAuth) {
+          if (!connection.connected) throw new Error('GitHub account is not connected. Please authorize GitHub again.')
+          push(`Connected GitHub account ${connection.login || account.name}.`, 'ok')
+          navigate('/onboarding', { replace: true })
+        }
       })
       .catch(error => push((error as Error).message, 'err'))
       .finally(() => setBusy(false))
@@ -60,16 +65,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try { const [u, repos, s, t] = await Promise.all([authService.connectDemo(), githubService.repositories(), skillService.careerDna(), roadmapService.get('j1')]); setUser(u); setRepo(repos[0]); setSkills(s); setTasks(t); setLast(new Date().toISOString()); push('Demo GitHub account connected. Data is simulated.', 'info') }
     catch (e) { push((e as Error).message, 'err') } finally { setBusy(false) }
   }
-  const disconnect = () => {
-    setUser(null); setRepo(null); setSkills([]); setChanges([]); setJobS(null); setTasks([])
-    void authService.logout().catch(error => push((error as Error).message, 'err'))
-    push('GitHub disconnected.')
+  const clearWorkspace = () => { setRepo(null); setSkills([]); setChanges([]); setJobS(null); setTasks([]); setLast(undefined) }
+  const disconnect = async () => {
+    if (!USE_MOCK) await githubService.disconnectAccount()
+    clearWorkspace()
+    setUser(current => current ? { ...current, githubLogin: undefined } : null)
+    push('GitHub disconnected. Your account remains signed in.')
+  }
+  const signOut = async () => {
+    try { await authService.logout() } finally { clearWorkspace(); setUser(null); navigate('/login', { replace: true }) }
+  }
+  const deleteAccount = async () => {
+    await authService.deleteAccount()
+    clearWorkspace(); setUser(null); navigate('/login', { replace: true })
   }
   const setAuthenticatedUser = (account: User) => {
     setUser({ ...account, demo: false })
     push(`Welcome, ${account.name}.`, 'ok')
   }
-  const setJob = async (j: JobPosting) => { setJobS(j); setLast(new Date().toISOString()); push('Assessment complete for ' + j.title) }
+  const setJob = async (j: JobPosting) => {
+    if (!USE_MOCK && !j.sample) {
+      await jobService.update(j.id, j.requirements)
+      const report = await jobService.assess(j.id)
+      if (report?.skills) setSkills(report.skills)
+    }
+    setJobS(j); setLast(new Date().toISOString()); push('Assessment complete for ' + j.title)
+  }
   const analyzeRepo = async () => { setBusy(true); await new Promise(r => setTimeout(r, 900)); setRepo(r => r && { ...r, analyzedSha: r.latestSha, analyzedAt: new Date().toISOString() }); setLast(new Date().toISOString()); setFresh('fresh'); setBusy(false); push('Repository analysed.', 'ok') }
   const simulateCommit = () => {
     if (!repo || freshness === 'in_progress') return
@@ -88,5 +109,5 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
   const toggleTask = (id: string) => { const t = tasks.find(x => x.id === id); if (!t) return; setTasks(ts => ts.map(x => x.id === id ? { ...x, done: !x.done } : x)); roadmapService.toggle(id, !t.done).catch(e => push(e.message, 'err')) }
   const fit = useMemo(() => fitScore(job, skills), [job, skills])
-  return <C.Provider value={{ user, repo, job, skills, changes, tasks, freshness, lastAssessed, busy, toasts, fit, connectDemo, disconnect, setAuthenticatedUser, setJob, analyzeRepo, simulateCommit, toggleTask, push, dismiss, setSkills }}>{children}</C.Provider>
+  return <C.Provider value={{ user, repo, job, skills, changes, tasks, freshness, lastAssessed, busy, toasts, fit, connectDemo, disconnect, signOut, deleteAccount, setRepo, setAuthenticatedUser, setJob, analyzeRepo, simulateCommit, toggleTask, push, dismiss, setSkills }}>{children}</C.Provider>
 }

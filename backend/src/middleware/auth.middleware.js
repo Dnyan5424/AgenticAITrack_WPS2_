@@ -20,7 +20,7 @@ module.exports = asyncHandler(async (req, res, next) => {
     throw error;
   }
   const user = await User.findById(payload.sub).select('+githubAccessToken');
-  if (!user) {
+  if (!user || (payload.version ?? 0) !== (user.tokenVersion || 0)) {
     const error = new Error('Authenticated user no longer exists');
     error.status = 401;
     throw error;

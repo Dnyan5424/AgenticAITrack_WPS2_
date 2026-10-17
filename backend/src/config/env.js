@@ -20,6 +20,14 @@ const schema = z.object({
   GITHUB_REDIRECT_URI: z.string().url().default(`${backendUrl}/api/github/callback`),
   GITHUB_WEBHOOK_SECRET: z.string().optional(),
   GEMINI_API_KEY: z.string().optional(),
+  REPO_MAX_FILES: z.coerce.number().int().min(1).max(300).default(120),
+  REPO_MAX_FILE_BYTES: z.coerce.number().int().min(65536).max(10 * 1024 * 1024).default(1024 * 1024),
+  REPO_MAX_SNAPSHOT_BYTES: z.coerce.number().int().min(1024 * 1024).max(50 * 1024 * 1024).default(12 * 1024 * 1024),
+  AI_EVIDENCE_MAX_FILES: z.coerce.number().int().min(1).max(20).default(6),
+  AI_EVIDENCE_SNIPPET_CHARS: z.coerce.number().int().min(200).max(3000).default(1200),
+  AI_CONTEXT_MAX_CHARS: z.coerce.number().int().min(1000).max(30000).default(12000),
+  RESEND_API_KEY: z.string().optional(),
+  EMAIL_FROM: z.string().optional(),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   WATCHER_ENABLED: z.enum(['true', 'false']).default('true')
 });
@@ -32,4 +40,5 @@ if (!parsed.success) {
 const env = parsed.data;
 env.githubConfigured = Boolean(env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET);
 env.geminiConfigured = Boolean(env.GEMINI_API_KEY);
+env.passwordResetConfigured = Boolean(env.RESEND_API_KEY && env.EMAIL_FROM);
 module.exports = env;

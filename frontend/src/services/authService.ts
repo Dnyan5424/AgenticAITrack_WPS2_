@@ -1,5 +1,5 @@
 import { USE_MOCK, BASE_URL } from '../api/client'
-import { get, post, EP, M, wait, type User } from './store'
+import { get, post, del as apiDelete, EP, M, wait, type User } from './store'
 
 const TOKEN_KEY = 'skillproof_token'
 
@@ -18,6 +18,17 @@ export const authService = {
   },
   register(credentials: { name: string; email: string; password: string }): Promise<User> {
     return authenticate(EP.authRegister, credentials)
+  },
+  requestPasswordReset(email: string) {
+    if (USE_MOCK) return Promise.reject(new Error('Password recovery is available for live accounts only.'))
+    return post<void>(EP.forgotPassword, { email })
+  },
+  async resetPassword(token: string, password: string): Promise<User> {
+    return authenticate(EP.resetPassword, { token, password })
+  },
+  async deleteAccount() {
+    await apiDelete(EP.deleteAccount)
+    this.clearToken()
   },
   consumeOAuthCallback(): boolean {
     const params = new URLSearchParams(window.location.hash.slice(1))

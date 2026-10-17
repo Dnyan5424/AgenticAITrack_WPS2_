@@ -32,3 +32,5 @@ The repository-root `render.yaml` defines a Node web service for the Express API
 
 ### GitHub OAuth session
 The OAuth callback returns to the frontend with a JWT in the URL fragment. The frontend consumes it into `sessionStorage`, removes it from the visible URL, and sends it as a Bearer token on API requests. After the redirect, it loads `/auth/me`, `/github/connection`, and `/github/repositories`. Set the GitHub OAuth callback URL to the backend's `/api/github/callback`, and set the backend `CLIENT_URL` to this frontend's origin.
+
+Password recovery sends one-time links through Resend. To enable it, set `RESEND_API_KEY` and `EMAIL_FROM` on the backend service; `EMAIL_FROM` must use a sender domain verified with Resend. Reset links expire after 30 minutes. New accounts are not email-verified in this release.

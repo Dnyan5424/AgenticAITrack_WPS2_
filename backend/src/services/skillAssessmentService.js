@@ -4,6 +4,7 @@ const GapReport = require('../models/GapReport');
 const { RULES, ruleFor, canonicalSkill } = require('../utils/skillRules');
 const { groundedExplanation } = require('./embeddingService');
 const logger = require('../utils/logger');
+const env = require('../config/env');
 
 const NOT_DEMONSTRATED = 'not_demonstrated_in_this_scope';
 
@@ -26,10 +27,14 @@ function evidenceCandidates(skill, files, commitSha) {
     const lines = file.content.split(/\r?\n/);
     const extensionMatch = rule.extensionIsEvidence && rule.extensions.some(extension => file.path.toLowerCase().endsWith(extension));
     const pathMatch = rule.pathIsEvidence && rule.pathPattern?.test(file.path.replace(/\\/g, '/'));
-    const matchIndex = lines.findIndex(line => rule.terms.some(term => matchesTerm(line, term)));
+    // Select the most informative line, rather than the first incidental mention.
+    const matchIndex = lines.reduce((bestIndex, line, index) => {
+      const score = rule.terms.reduce((total, term) => total + Number(matchesTerm(line, term)), 0);
+      return score > bestIndex.score ? { index, score } : bestIndex;
+    }, { index: -1, score: 0 }).index;
     const selectedLine = matchIndex >= 0 ? matchIndex : extensionMatch || pathMatch ? lines.findIndex(line => line.trim()) : -1;
     if (selectedLine < 0) continue;
-    const snippet = lines.slice(Math.max(0, selectedLine - 1), Math.min(lines.length, selectedLine + 2)).join('\n').trim().slice(0, 1000);
+    const snippet = lines.slice(Math.max(0, selectedLine - 2), Math.min(lines.length, selectedLine + 3)).join('\n').trim().slice(0, env.AI_EVIDENCE_SNIPPET_CHARS);
     if (!snippet) continue;
     candidates.push({
       evidenceType: evidenceKind(file.path),

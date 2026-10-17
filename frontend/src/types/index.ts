@@ -3,7 +3,7 @@ export type Freshness = 'fresh' | 'changes' | 'in_progress' | 'failed'
 export interface User { id: string; name: string; email: string; githubLogin?: string; demo: boolean }
 export interface Commit { sha: string; message: string; date: string; files: string[]; url?: string }
 export interface RepositoryFile { path: string; kind: 'source' | 'sql' | 'test' | 'deploy' | 'doc'; excerpt: string; explanation: string }
-export interface Repository { id: string; name: string; language: string; branch: string; latestSha: string; analyzedSha: string; analyzedAt: string; description: string; files: RepositoryFile[]; commits: Commit[] }
+export interface Repository { id: string; name: string; repoFullName?: string; language: string; branch: string; latestSha: string; analyzedSha: string; analyzedAt: string; description: string; files: RepositoryFile[]; commits: Commit[] }
 export interface JobRequirement { name: string; required: boolean }
 export interface JobPosting { id: string; title: string; company: string; sourceUrl: string; sample: boolean; requirements: JobRequirement[] }
 export interface SkillEvidence { repo: string; file: string; excerpt: string; commit: string; explanation: string; url?: string }

@@ -56,6 +56,15 @@ exports.list = asyncHandler(async (req, res) => {
   success(res, jobs.map(toFrontend));
 });
 
+exports.update = asyncHandler(async (req, res) => {
+  const job = await ownedJob(req.params.id, req.user);
+  job.requiredSkills = [...new Set(req.body.requirements.filter(item => item.required).map(item => item.name.trim()))];
+  job.preferredSkills = [...new Set(req.body.requirements.filter(item => !item.required).map(item => item.name.trim()))];
+  job.analysisStatus = 'ready';
+  await job.save();
+  success(res, toFrontend(job), 'Job requirements updated');
+});
+
 exports.assess = asyncHandler(async (req, res) => {
   const job = await ownedJob(req.params.id, req.user);
   const repositories = await Repository.find({ user: req.user._id, isPrivate: { $ne: true }, status: { $ne: 'failed' } });

@@ -21,7 +21,9 @@ async function detectAndReassess(user, repository) {
   const { data: comparison } = await api.get(`/repos/${repository.repoFullName}/compare/${beforeSha}...${afterSha}`);
   const changedFiles = (comparison.files || []).map(file => file.filename);
   const latestMessage = comparison.commits?.[comparison.commits.length - 1]?.commit.message || 'Repository updated';
-  const snapshot = await fetchRepositorySnapshot(user, repository);
+  // Put changed paths first so commit reassessment can inspect them even when
+  // the repository has more than the normal 120-file analysis limit.
+  const snapshot = await fetchRepositorySnapshot(user, repository, { priorityPaths: changedFiles });
   const changedFileSet = new Set(changedFiles);
   const changedData = snapshot.files.filter(file => changedFileSet.has(file.path));
   const impacted = affectedSkills(changedFiles, changedData);

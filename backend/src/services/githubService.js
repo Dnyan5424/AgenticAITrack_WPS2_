@@ -1,7 +1,10 @@
 const { githubClient } = require('../config/github');
+const env = require('../config/env');
 
-const MAX_FILES = 120;
-const MAX_FILE_BYTES = 64 * 1024;
+// Keep repository analysis bounded while allowing moderately large source files.
+const MAX_FILES = env.REPO_MAX_FILES;
+const MAX_FILE_BYTES = env.REPO_MAX_FILE_BYTES;
+const MAX_SNAPSHOT_BYTES = env.REPO_MAX_SNAPSHOT_BYTES;
 const SKIP_DIRS = /(^|\/)(node_modules|vendor|dist|build|coverage|\.git|\.next)\//i;
 const PRIORITY = /(^|\/)(readme|package\.json|requirements\.txt|pyproject\.toml|pom\.xml|build\.gradle|dockerfile|docker-compose|\.github\/workflows|.*\.(test|spec)\.)/i;
 
@@ -48,7 +51,7 @@ async function getRepository(user, repoFullName) {
   return data;
 }
 
-async function fetchRepositorySnapshot(user, repository) {
+async function fetchRepositorySnapshot(user, repository, { priorityPaths = [] } = {}) {
   if (repository.isPrivate) {
     const error = new Error('Only public GitHub repositories are supported');
     error.status = 403;
@@ -62,17 +65,28 @@ async function fetchRepositorySnapshot(user, repository) {
   const commitSha = branchInfo.commit.sha;
   const { data: treeData } = await api.get(`/repos/${ownerRepo}/git/trees/${commitSha}`, { params: { recursive: 1 } });
   const entries = treeData.tree.filter(item => item.type === 'blob' && item.size <= MAX_FILE_BYTES && !SKIP_DIRS.test(item.path));
-  entries.sort((a, b) => Number(PRIORITY.test(b.path)) - Number(PRIORITY.test(a.path)));
+  const changedPathSet = new Set(priorityPaths);
+  entries.sort((a, b) =>
+    Number(changedPathSet.has(b.path)) - Number(changedPathSet.has(a.path)) ||
+    Number(PRIORITY.test(b.path)) - Number(PRIORITY.test(a.path)) ||
+    a.path.localeCompare(b.path)
+  );
   const files = [];
+  let snapshotBytes = 0;
   for (const entry of entries.slice(0, MAX_FILES)) {
+    if (snapshotBytes + entry.size > MAX_SNAPSHOT_BYTES) continue;
     try {
       const { data: blob } = await api.get(`/repos/${ownerRepo}/git/blobs/${entry.sha}`);
       if (blob.encoding !== 'base64') continue;
+      const bytes = Buffer.from(blob.content, 'base64');
+      // Binary files cannot provide useful text evidence and can contain invalid UTF-8.
+      if (bytes.includes(0)) continue;
+      snapshotBytes += bytes.length;
       files.push({
         path: entry.path,
         sha: entry.sha,
         size: entry.size,
-        content: Buffer.from(blob.content, 'base64').toString('utf8').slice(0, MAX_FILE_BYTES),
+        content: bytes.toString('utf8'),
         url: `https://github.com/${ownerRepo}/blob/${commitSha}/${entry.path.split('/').map(encodeURIComponent).join('/')}`
       });
     } catch (error) {
@@ -86,6 +100,13 @@ async function fetchRepositorySnapshot(user, repository) {
     branch,
     language: repo.language,
     files,
+    analysisScope: {
+      maxFiles: MAX_FILES,
+      maxFileBytes: MAX_FILE_BYTES,
+      maxSnapshotBytes: MAX_SNAPSHOT_BYTES,
+      analyzedFiles: files.length,
+      omittedLargeFiles: treeData.tree.filter(item => item.type === 'blob' && item.size > MAX_FILE_BYTES && !SKIP_DIRS.test(item.path)).length
+    },
     commits: commits.map(commit => ({
       sha: commit.sha,
       message: commit.commit.message,
